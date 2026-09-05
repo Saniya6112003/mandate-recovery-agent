@@ -15,8 +15,10 @@ services:
     name: mandate-recovery-agent
     runtime: python
     plan: free
-    # Closest region to India — Razorpay's webhook calls originate there.
-    region: singapore
+    # Region is deliberately left unset. Render cannot move an existing
+    # service between regions in place — setting it on a live blueprint can
+    # force a recreate, which changes the URL and drops the audit log. Pick
+    # the region at first deploy if it matters; do not change it afterwards.
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /healthz
