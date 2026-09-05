@@ -1,0 +1,25 @@
+#!/bin/sh
+# Blocks any commit that contains something shaped like a live credential.
+# Enable once with:  git config core.hooksPath .githooks
+#
+# This is a local safety net, not a substitute for .gitignore — hooks are not
+# pushed with the repo, so it protects this clone only.
+
+if git diff --cached --name-only | grep -qE '(^|/)\.env$'; then
+    echo "BLOCKED: .env is staged. Never commit it — it holds live API keys."
+    exit 1
+fi
+
+# Patterns: Anthropic keys, Razorpay key ids, generic long secrets in assignments.
+PATTERN='sk-ant-[A-Za-z0-9_-]{8,}|rzp_(live|test)_[A-Za-z0-9]{8,}'
+
+if git diff --cached -U0 | grep -nE "^\+" | grep -qE "$PATTERN"; then
+    echo "BLOCKED: a staged change looks like it contains a real API key:"
+    git diff --cached -U0 | grep -nE "^\+" | grep -oE "$PATTERN" | sort -u | sed 's/^/  /'
+    echo ""
+    echo "Move it into .env (git-ignored) and keep placeholders in .env.example."
+    echo "If this is a false positive: git commit --no-verify"
+    exit 1
+fi
+
+exit 0
