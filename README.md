@@ -2,8 +2,11 @@
 
 # UPI Autopay Mandate Recovery Agent
 
-### Explainable Recovery · RBI-Bounded Guardrails · Webhook-Verified Audit Trail
+### Razorpay AI Buildathon · Track 3 — AI Revenue Recovery
 
+**Explainable Recovery · RBI-Bounded Guardrails · Webhook-Verified Audit Trail**
+
+[![Track](https://img.shields.io/badge/Track%203-AI%20Revenue%20Recovery-3395FF?style=flat-square)](https://razorpay.com/buildathon)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Razorpay](https://img.shields.io/badge/Razorpay-Test%20Mode-0C2451?style=flat-square&logo=razorpay&logoColor=white)](https://razorpay.com)
