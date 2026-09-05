@@ -144,6 +144,21 @@ The threshold did earn its place once: `ZA` ("transaction declined", no reason g
 
 In production this signal would route through a calibrated classifier. The honest version of the claim is that the guardrails are load-bearing and the confidence score is not.
 
+### The audit log refusing a real payment
+
+A live test-mode Payment Link for ₹9,999 was created by the executor and paid for real. Razorpay confirms it:
+
+```
+plink_TYJdWhDKgUHZmj   status=paid   INR 9,999
+notes.mandate_id = MID21C56811CD     (attribution survived the round trip)
+```
+
+The audit log still reads **`pending`** for that mandate.
+
+That is not a bug — it is the design holding under pressure. The webhook could not be delivered (the demo network blocks inbound tunnelling), so no signature-verified `payment_link.paid` event ever arrived, so the system declined to claim the recovery. The money was real and the agent still would not count it.
+
+Marking this `recovered` would have required trusting either an API poll or the executor's own success — exactly the self-reported number this project exists to avoid. The ₹-recovered figure only ever moves on cryptographic proof, and it under-reports rather than overstates when that proof is missing.
+
 ### What the guardrails actually caught
 
 Three distinct rules fired on real cases, none of them contrived:
