@@ -1,0 +1,38 @@
+# Render blueprint — deploys the audit console and webhook receiver.
+#
+# Deploy:
+#   1. Push this repo to GitHub
+#   2. render.com -> New -> Blueprint -> pick the repo
+#   3. Fill the secrets marked sync:false in the Render dashboard
+#   4. Point the Razorpay webhook at  https://<service>.onrender.com/webhook
+#
+# The free instance sleeps after inactivity and takes ~30s to wake. Razorpay
+# retries failed webhook deliveries, so a sleeping instance delays a
+# confirmation rather than losing it — but hit the URL once before a live
+# demo so the first request isn't the cold start.
+services:
+  - type: web
+    name: mandate-recovery-agent
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: REASONING_PROVIDER
+        value: groq
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      - key: RECOVERY_KILL_SWITCH
+        value: "false"
+      # Set these in the Render dashboard — never commit them.
+      - key: GROQ_API_KEY
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false

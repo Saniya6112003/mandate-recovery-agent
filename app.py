@@ -1,25 +1,43 @@
-"""FastAPI app: webhook receiver + a couple of read-only demo endpoints
-(project guide §0). Not required for the demo to work — `run_batch.py` alone
-produces the full audit log — but useful if the pitch video wants a live,
-browser-visible run instead of only a terminal walkthrough.
+"""FastAPI app: audit console, webhook receiver, and demo endpoints.
 
-Run with: uvicorn app:app --reload
+Run locally with:  uvicorn app:app --reload
+Deployed, the webhook URL is  https://<host>/webhook
 """
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 
 from agent.audit_log import load_log
+from agent.dashboard_data import build_payload
 from agent.executor import kill_switch_engaged
 from agent.pipeline import process_batch
+from agent.reasoning_agent import _provider
 from agent.webhook_handler import router as webhook_router
 from data.generate_dataset import load_dataset
 
-app = FastAPI(title="UPI Autopay Mandate Recovery Agent")
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+app = FastAPI(
+    title="UPI Autopay Mandate Recovery Agent",
+    description="Explainable, RBI-bounded recovery for failed UPI Autopay mandate debits.",
+)
 app.include_router(webhook_router)
+
+
+@app.get("/", include_in_schema=False)
+def dashboard():
+    """Audit console — every decision, verdict and outcome."""
+    return FileResponse(STATIC_DIR / "dashboard.html")
+
+
+@app.get("/api/dashboard")
+def dashboard_data():
+    return build_payload()
 
 
 @app.get("/demo/audit-log")
@@ -34,6 +52,7 @@ def run_batch(limit: Optional[int] = None):
         events = events[:limit]
     entries = process_batch(events)
     return {
+        "provider": _provider(),
         "kill_switch_engaged": kill_switch_engaged(),
         "processed": len(entries),
         "entries": [e.model_dump(mode="json") for e in entries],
@@ -42,4 +61,4 @@ def run_batch(limit: Optional[int] = None):
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok"}
+    return {"status": "ok", "provider": _provider(), "kill_switch": kill_switch_engaged()}

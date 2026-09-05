@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandate Recovery — Audit Console</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#12161c; --muted:#5b6673;
+    --line:#e3e7ec; --accent:#1f6feb; --ok:#0f7b4f; --okbg:#e6f4ec;
+    --warn:#8a5a00; --warnbg:#fdf3e0; --stop:#a4262c; --stopbg:#fdeced;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0d1117; --panel:#151b23; --ink:#e6edf3; --muted:#93a1b1;
+      --line:#262e38; --accent:#58a6ff; --ok:#4ac585; --okbg:#10261c;
+      --warn:#e3b341; --warnbg:#2a2110; --stop:#f97583; --stopbg:#2d1418;
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1240px; margin:0 auto; padding:32px 24px 72px}
+  header{display:flex; flex-wrap:wrap; gap:16px; align-items:baseline; justify-content:space-between; margin-bottom:8px}
+  h1{font-size:21px; margin:0; letter-spacing:-.01em}
+  .sub{color:var(--muted); font-size:13.5px; margin:6px 0 26px; max-width:76ch}
+  .pill{font-size:12px; padding:4px 10px; border-radius:999px; border:1px solid var(--line); color:var(--muted); background:var(--panel)}
+
+  .grid{display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(178px,1fr)); margin-bottom:14px}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px}
+  .card .k{font-size:11.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted)}
+  .card .v{font-size:27px; font-weight:600; margin-top:7px; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+  .card .n{font-size:12.5px; color:var(--muted); margin-top:4px}
+
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px 22px; margin-bottom:14px}
+  .panel h2{font-size:14px; margin:0 0 4px; letter-spacing:-.01em}
+  .panel p.note{color:var(--muted); font-size:13px; margin:0 0 14px; max-width:82ch}
+
+  .calib{display:flex; flex-wrap:wrap; gap:28px; align-items:flex-end}
+  .calib div span{display:block}
+  .calib .lab{font-size:12px; color:var(--muted)}
+  .calib .num{font-size:30px; font-weight:650; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+  .delta{font-size:13px; color:var(--muted); border-left:1px solid var(--line); padding-left:26px}
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px}
+  th{
+    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--muted); font-weight:600; padding:0 10px 9px; border-bottom:1px solid var(--line); white-space:nowrap;
+  }
+  td{padding:11px 10px; border-bottom:1px solid var(--line); vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  .code{font-family:var(--mono); font-size:12.5px}
+  .num{font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap}
+  .tag{display:inline-block; font-size:11.5px; padding:2px 8px; border-radius:999px; white-space:nowrap; font-weight:500}
+  .t-ok{background:var(--okbg); color:var(--ok)}
+  .t-warn{background:var(--warnbg); color:var(--warn)}
+  .t-stop{background:var(--stopbg); color:var(--stop)}
+  .t-mute{background:transparent; color:var(--muted); border:1px solid var(--line)}
+  .reason{color:var(--muted); font-size:12.5px; margin-top:5px; max-width:62ch}
+  .ovr{color:var(--stop); font-size:12.5px; margin-top:5px; max-width:62ch}
+  .miss{color:var(--stop)}
+  a{color:var(--accent)}
+  .scroll{overflow-x:auto}
+  .empty{color:var(--muted); padding:26px 0; text-align:center}
+  .bar{height:5px; background:var(--line); border-radius:3px; overflow:hidden; min-width:76px}
+  .bar i{display:block; height:100%; background:var(--ok)}
+  footer{color:var(--muted); font-size:12.5px; margin-top:30px; line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>UPI Autopay Mandate Recovery</h1>
+    </div>
+    <span class="pill" id="live">loading…</span>
+  </header>
+  <p class="sub">
+    Every recovery decision, the compliance verdict that reviewed it, and the outcome.
+    A case is marked <strong>recovered</strong> only when a signature-verified webhook confirms
+    payment — never because an API call succeeded.
+  </p>
+
+  <div class="grid" id="cards"></div>
+
+  <section class="panel" id="calibPanel" hidden>
+    <h2>Confidence calibration</h2>
+    <p class="note">
+      The model's self-reported confidence, split by whether it was actually right.
+      These two numbers being close is the finding: confidence carries little information
+      about correctness, which is why the compliance rules are deterministic code that
+      overrides the model rather than a prompt asking it to be careful.
+    </p>
+    <div class="calib" id="calib"></div>
+  </section>
+
+  <section class="panel" id="causePanel" hidden>
+    <h2>Accuracy by true cause</h2>
+    <p class="note">Ground-truth labels are used for scoring only; the agent never sees them.</p>
+    <div class="scroll"><table id="causeTable"></table></div>
+  </section>
+
+  <section class="panel">
+    <h2>Decision log</h2>
+    <p class="note">
+      Newest first. Rows flagged <span class="tag t-stop">overridden</span> are cases where the
+      compliance layer refused the model's recommendation.
+    </p>
+    <div class="scroll"><table id="rowsTable"></table></div>
+  </section>
+
+  <footer>
+    <strong>confidence</strong> is the model's self-report, not a calibrated probability.
+    It is used only as a one-way escalation trigger, never as permission to act.<br>
+    Synthetic mandate failures; real Razorpay <strong>test-mode</strong> Payment Links. No real money moves.
+  </footer>
+</div>
+
+<script>
+const inr = n => n == null ? "—" : "₹" + Number(n).toLocaleString("en-IN", {maximumFractionDigits:0});
+const pct = n => n == null ? "—" : Math.round(n * 100) + "%";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function tag(text, kind){ return `<span class="tag ${kind}">${esc(text)}</span>`; }
+
+function outcomeTag(o){
+  if (o === "recovered") return tag("recovered", "t-ok");
+  if (o === "escalated") return tag("escalated", "t-warn");
+  if (o === "failed")    return tag("failed", "t-stop");
+  return tag(o, "t-mute");
+}
+
+function card(k, v, n){
+  return `<div class="card"><div class="k">${esc(k)}</div><div class="v">${v}</div>${
+    n ? `<div class="n">${n}</div>` : ""}</div>`;
+}
+
+function render(d){
+  const s = d.summary;
+  document.getElementById("live").textContent =
+    s.cases ? `${s.cases} decisions logged` : "no decisions yet";
+
+  document.getElementById("cards").innerHTML = [
+    card("Cases", s.cases, s.scored ? `${s.scored} scored against ground truth` : "run a batch to populate"),
+    card("Diagnosis accuracy", pct(s.accuracy), s.scored ? `${s.correct}/${s.scored} correct` : "—"),
+    card("At risk", inr(s.amount_at_risk), "total value in batch"),
+    card("Recovered", inr(s.amount_recovered), `${s.recovered} webhook-verified`),
+    card("Guardrail overrides", s.overrides, "model recommendation refused"),
+    card("Escalated", s.escalated, "sent to human review"),
+    card("False-positive cost", inr(s.false_positive_cost),
+         `${s.false_positive_count} confident but wrong`),
+    card("Awaiting proof", s.pending, "paid but unverified stays pending"),
+  ].join("");
+
+  if (s.confidence_when_right != null && s.confidence_when_wrong != null){
+    document.getElementById("calibPanel").hidden = false;
+    const gap = Math.abs(s.confidence_when_right - s.confidence_when_wrong);
+    document.getElementById("calib").innerHTML = `
+      <div><span class="lab">Mean confidence when right</span>
+           <span class="num">${s.confidence_when_right.toFixed(3)}</span></div>
+      <div><span class="lab">Mean confidence when wrong</span>
+           <span class="num">${s.confidence_when_wrong.toFixed(3)}</span></div>
+      <div class="delta">Difference of <strong>${gap.toFixed(3)}</strong>.<br>
+           Escalation threshold ${s.threshold}.</div>`;
+  }
+
+  if (d.by_cause.length){
+    document.getElementById("causePanel").hidden = false;
+    document.getElementById("causeTable").innerHTML =
+      `<thead><tr><th>True cause</th><th class="num">Cases</th><th>Accuracy</th>
+        <th class="num">Value</th></tr></thead><tbody>` +
+      d.by_cause.map(c => `<tr>
+        <td class="code">${esc(c.cause)}</td>
+        <td class="num">${c.n}</td>
+        <td><div style="display:flex;gap:9px;align-items:center">
+          <div class="bar"><i style="width:${(c.accuracy*100).toFixed(0)}%"></i></div>
+          <span class="num">${pct(c.accuracy)}</span></div></td>
+        <td class="num">${inr(c.amount)}</td></tr>`).join("") + `</tbody>`;
+  }
+
+  const t = document.getElementById("rowsTable");
+  if (!d.rows.length){
+    t.outerHTML = `<div class="empty">No decisions yet — run <code>python run_batch.py</code>.</div>`;
+    return;
+  }
+  t.innerHTML = `<thead><tr>
+      <th>Mandate</th><th>Code</th><th class="num">Amount</th>
+      <th>Diagnosis</th><th class="num">Conf.</th><th>Action</th><th>Outcome</th>
+    </tr></thead><tbody>` + d.rows.map(r => {
+    const wrong = r.match === false;
+    return `<tr>
+      <td class="code">${esc(r.mandate_id)}${r.is_hard_case ? " " + tag("hard", "t-mute") : ""}</td>
+      <td class="code">${esc(r.code)}</td>
+      <td class="num">${inr(r.amount)}</td>
+      <td>
+        <span class="code ${wrong ? "miss" : ""}">${esc(r.predicted)}</span>
+        ${wrong ? `<div class="ovr">actual: ${esc(r.true_cause)}</div>` : ""}
+        <div class="reason">${esc(r.reasoning)}</div>
+      </td>
+      <td class="num">${r.confidence.toFixed(2)}</td>
+      <td>
+        ${esc(r.action)}
+        ${r.overridden ? `<div class="ovr">${tag("overridden", "t-stop")} ${esc(r.override_reason)}</div>` : ""}
+        ${r.payment_url ? `<div class="reason"><a href="${esc(r.payment_url)}" target="_blank" rel="noopener">payment link</a></div>` : ""}
+      </td>
+      <td>${outcomeTag(r.outcome)}</td>
+    </tr>`;
+  }).join("") + `</tbody>`;
+}
+
+fetch("api/dashboard")
+  .then(r => r.json())
+  .then(render)
+  .catch(e => { document.getElementById("live").textContent = "failed to load: " + e; });
+</script>
+</body>
+</html>
