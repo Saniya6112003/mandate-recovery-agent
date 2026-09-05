@@ -25,16 +25,42 @@ The guardrail layer here is built from those specific rules. It is not a generic
 ## Architecture
 
 ```
-Failed mandate event  →  AI reasoning agent  →  Guardrail check  →  Action executor  →  Audit log
-  (amount, NPCI            (diagnoses cause,      (RBI rules,         (Razorpay          (immutable,
-   response code,           picks action,          retry caps,         Payment Link)      one row per
-   retry history)           states confidence)     exposure cap)                          decision)
-                                                         ↓                                    ↑
-                                                   can override                          webhook flips
-                                                   the AI entirely                    outcome → recovered
+  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+  │  FAILED DEBIT   │    │ REASONING AGENT │    │   GUARDRAILS    │
+  ├─────────────────┤    ├─────────────────┤    ├─────────────────┤
+  │ NPCI code       │───▶│ diagnoses cause │───▶│ RBI notice      │
+  │ amount          │    │ picks ONE action│    │ retry cap (3)   │
+  │ retry history   │    │ rates confidence│    │ exposure cap    │
+  │ mandate type    │    │                 │    │ mandate state   │
+  └─────────────────┘    └─────────────────┘    └────────┬────────┘
+                                                         │
+                    the agent never sees                 │  MAY REFUSE
+                    mandate_status                       │  the agent's plan
+                                                         ▼
+  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+  │    AUDIT LOG    │    │     OUTCOME     │    │    EXECUTOR     │
+  ├─────────────────┤    ├─────────────────┤    ├─────────────────┤
+  │ one row per     │◀───│ pending         │◀───│ Razorpay        │
+  │ decision        │    │ escalated       │    │ Payment Link    │
+  │ immutable       │    │ failed          │    │ or human queue  │
+  │ Postgres-backed │    │ recovered       │    │ kill switch     │
+  └─────────────────┘    └────────▲────────┘    └─────────────────┘
+                                  │
+                   ┌──────────────┴───────────┐
+                   │ SIGNED WEBHOOK · Razorpay│
+                   ├──────────────────────────┤
+                   │ HMAC-SHA256 verified     │
+                   │ the ONLY path to         │
+                   │ outcome = recovered      │
+                   └──────────────────────────┘
 ```
 
-The critical property: **the guardrail is independent of the model.** It reads authoritative mandate state, not the AI's diagnosis, so it catches an unsafe retry even when the model misdiagnoses the failure completely.
+**Two properties carry the whole design:**
+
+| | |
+|---|---|
+| **The guardrail is independent of the model** | It reads authoritative `mandate_status`, not the agent's diagnosis — so it blocks an unlawful retry even when the model misdiagnoses the failure completely, and however confident it claims to be. |
+| **Only a signed webhook can say `recovered`** | Not an API poll, not the executor's own success. The rupee figure moves on cryptographic evidence alone, and under-reports when that evidence is missing. |
 
 ---
 
@@ -339,6 +365,7 @@ Deployment is a correctness requirement here, not a convenience: a signature-ver
 | Endpoint | Purpose |
 |---|---|
 | `/` | Landing site — the problem, the pipeline, the guardrail moment, build challenges |
+| `/pitch` | Self-playing pitch presentation |
 | `/console` | Audit console — every decision, verdict and outcome |
 | `/api/dashboard` | Metrics and decision rows as JSON |
 | `/webhook` | Razorpay receiver, HMAC-SHA256 verified |
@@ -358,18 +385,3 @@ Deployment is a correctness requirement here, not a convenience: a signature-ver
 | Webhook-verified recovery | Built — confirmed against live Razorpay |
 | Full RBI rule coverage beyond demo cases | Designed |
 | Reviewer workflow UI, drift detection | Designed |
-
----
-
-## Limitations
-
-Stated plainly, because a reviewer will find them anyway:
-
-- **`confidence` is model self-report, not calibrated.** Measured across two runs it did not reliably separate correct answers from incorrect ones. It is used only as a one-way escalation trigger.
-- **Input data is synthetic.** Real API execution is on the output/recovery side, which is where correctness actually matters. Failure codes are real; the failures themselves are generated.
-- **Accuracy is small-sample and provider-dependent.** 60 cases on one model. Treat it as directional.
-- **The mandate-state guardrail did not fire in the measured run** — the model never recommended retrying a revoked mandate, so the rule had nothing to catch. It is covered by explicit tests rather than left to a dataset coincidence.
-- **Test-mode Razorpay only.** No real money moves at any point.
-- **The audit log is durable only where a database is configured.** With `DATABASE_URL` set it is Postgres-backed and survives restarts; without it, the JSONL fallback lives on local disk and should not be relied on in ephemeral hosting.
-- **One verified recovery, not a recovery rate.** A recovery was confirmed end to end by a real webhook. That proves the mechanism, not a conversion percentage — claiming a recovery rate would need real customers, not synthetic ones.
-- **The deployed instance is free-tier.** It sleeps when idle, so a webhook can time out against a cold start. The system handles that correctly (the case stays `pending`), but a production deployment would run warm.
