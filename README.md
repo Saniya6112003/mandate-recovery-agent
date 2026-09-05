@@ -106,41 +106,34 @@ Duplicate webhook deliveries are idempotent — Razorpay's docs warn they happen
 
 | Metric | Value |
 |---|---|
-| Cause diagnosis accuracy | **93%** (56/60) |
-| Guardrail overrides | **4** |
-| Escalated to human review | **3** |
-| Cases below the 0.6 confidence threshold | **1** |
-| Mean self-reported confidence | **0.90** |
+| Cause diagnosis accuracy | **97%** (58/60) |
+| Guardrail overrides | **5** |
+| Escalated to human review | **4** |
+| ₹ at risk across the batch | **₹274,640** |
+| False-positive cost | **₹12,998** (2 confident-but-wrong cases) |
 
-Accuracy by cause:
-
-| True cause | n | Accuracy |
-|---|---|---|
-| insufficient_funds | 24 | 100% |
-| bank_timeout | 12 | 100% |
-| daily_limit_exceeded | 9 | 100% |
-| authentication_failure | 6 | 100% |
-| mandate_revoked | 6 | 67% |
-| unknown | 3 | 33% |
+Errors concentrate on the genuinely ambiguous codes — `B3` ("transaction not permitted to the account") and `QA` (mandate paused by user) — not on the common failure modes, which score 100%.
 
 ### The finding that matters
 
-93% accuracy is the least interesting number here. This is the important one:
+Accuracy is the least interesting number here. This is the important one, measured across two independent 60-case runs:
 
-| | Mean confidence |
-|---|---|
-| When the model was **right** (56 cases) | **0.898** |
-| When the model was **wrong** (4 cases) | **0.895** |
+| Run | Accuracy | Confidence when **right** | Confidence when **wrong** |
+|---|---|---|---|
+| A | 93% | 0.898 | 0.895 |
+| B | 97% | 0.889 | **0.940** |
 
-**A difference of 0.003.** The model's self-reported confidence carries essentially *no information* about whether its answer is correct. It was just as certain about its four mistakes as about its fifty-six successes — two of them (`QA`, mandate paused by user, misread as an authentication failure) at **0.96**.
+In run A the two were indistinguishable. In run B the model was **more confident about its mistakes than its correct answers**.
 
-This is what "`confidence` is self-report, not a calibrated probability" means in practice, and it is the entire justification for this system's architecture. A recovery agent that trusted that number would route on noise. Instead:
+The precise gap is noisy — with only 2–4 wrong cases per run, that statistic carries little weight on its own, and it would be dishonest to quote either figure as a stable measurement. What survives across both runs is the robust claim: **self-reported confidence does not reliably separate correct answers from incorrect ones.** It never behaved like a probability in either direction.
+
+That is what "`confidence` is self-report, not a calibrated probability" means in practice, and it is the entire justification for this system's architecture. A recovery agent that trusted that number would route on noise. Instead:
 
 - Confidence is used **only** as a one-way escalation trigger, never as permission to act.
 - The compliance rules are deterministic code that override the model regardless of how certain it claims to be.
 - The guardrail reads authoritative mandate state, not the model's diagnosis — so a confident misdiagnosis still cannot produce an illegal retry.
 
-The threshold did earn its place once: `ZA` ("transaction declined", no reason given) came back at **0.30** and was routed to a human. That is the signal working as intended — but on 1 case in 60, it is a backstop, not a control.
+The threshold does earn its place occasionally: `ZA` ("transaction declined", no reason given) came back at **0.30** and was routed to a human. That is the signal working as intended — but on a handful of cases in 60, it is a backstop, not a control.
 
 In production this signal would route through a calibrated classifier. The honest version of the claim is that the guardrails are load-bearing and the confidence score is not.
 
