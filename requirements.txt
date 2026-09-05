@@ -7,3 +7,4 @@ python-dotenv
 pandas
 pytest
 httpx
+psycopg2-binary

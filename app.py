@@ -12,7 +12,7 @@ from typing import Optional
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 
-from agent.audit_log import load_log
+from agent.audit_log import backend, load_log
 from agent.dashboard_data import build_payload
 from agent.executor import kill_switch_engaged
 from agent.pipeline import process_batch
@@ -76,4 +76,10 @@ def run_batch(limit: Optional[int] = None, resume: bool = False):
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "provider": _provider(), "kill_switch": kill_switch_engaged()}
+    return {
+        "status": "ok",
+        "provider": _provider(),
+        "kill_switch": kill_switch_engaged(),
+        "audit_backend": backend(),
+        "cases_logged": len(load_log()),
+    }

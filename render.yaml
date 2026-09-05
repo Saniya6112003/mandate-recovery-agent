@@ -23,6 +23,13 @@ services:
     startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /healthz
     envVars:
+      # Durable audit log. Without this the log falls back to a JSONL file on
+      # the container filesystem, which does NOT survive a redeploy — a
+      # verified recovery was lost that way before this was added.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mandate-recovery-db
+          property: connectionString
       - key: PYTHON_VERSION
         value: "3.11.9"
       - key: REASONING_PROVIDER
@@ -40,3 +47,9 @@ services:
         sync: false
       - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
+
+databases:
+  - name: mandate-recovery-db
+    plan: free
+    databaseName: mandate_recovery
+    user: mandate_recovery

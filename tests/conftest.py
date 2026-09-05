@@ -19,7 +19,13 @@ from agent import executor
 
 @pytest.fixture(autouse=True)
 def never_call_live_apis(monkeypatch):
-    for name in ("RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "ANTHROPIC_API_KEY"):
+    for name in (
+        "RAZORPAY_KEY_ID",
+        "RAZORPAY_KEY_SECRET",
+        "ANTHROPIC_API_KEY",
+        # Tests must exercise the file backend, never a real database.
+        "DATABASE_URL",
+    ):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(executor, "_client", None)
     yield

@@ -44,7 +44,7 @@ The critical property: **the guardrail is independent of the model.** It reads a
 pip install -r requirements.txt
 cp .env.example .env          # defaults to the offline provider — no API key needed
 python run_batch.py           # full batch + metrics report
-python -m pytest              # 90 tests
+python -m pytest              # 98 tests
 ```
 
 Four reasoning providers, switched with one env var. Every one of them forces
@@ -94,11 +94,21 @@ not technically possible; routing to notify_customer/escalate_human instead
 
 ## Audit trail
 
-One immutable JSONL row per decision, carrying the input signal, the model's full reasoning, the guardrail verdict, the action taken, **the Payment Link actually created**, and the outcome.
+One append-only row per decision, carrying the input signal, the model's full reasoning, the guardrail verdict, the action taken, **the Payment Link actually created**, and the outcome.
 
 `outcome: recovered` is set by exactly one thing: a signature-verified `payment_link.paid` webhook. Never by an API call succeeding. That is what makes the ₹-recovered figure defensible rather than self-reported.
 
-Duplicate webhook deliveries are idempotent — Razorpay's docs warn they happen, and a double-count would corrupt the headline number.
+Two backends behind one interface, chosen by `DATABASE_URL`:
+
+| | Postgres | JSONL file |
+|---|---|---|
+| Survives a restart | yes | **no** — ephemeral hosting destroys it |
+| `event_id` uniqueness | enforced by a `PRIMARY KEY` | convention only |
+| Setup needed | a database | none |
+
+Postgres is the deployed configuration; the file backend keeps local development and the test suite dependency-free. `/healthz` reports which one is live.
+
+Duplicate webhook deliveries are idempotent either way — Razorpay's docs warn they happen, and a double-count would corrupt the headline number. On Postgres that guarantee is `ON CONFLICT (event_id) DO NOTHING`, so it holds even if the application misbehaves.
 
 ---
 
@@ -253,7 +263,17 @@ A recovery system that dies because one model response came back garbled is not 
 
 Combined with `--resume`, the interrupted run continued from case 37 without re-spending on the 36 already decided.
 
-### 11. Python 3.8 blocked the official SDK
+### 11. The "immutable" audit log was not durable
+
+The audit log was an append-only JSONL file. Append-only is not the same as durable, and the difference showed up the hard way: a redeploy rebuilt the container, the filesystem was ephemeral, and **the webhook-verified ₹9,999 recovery vanished**. The evidence for the project's central claim was destroyed by a routine deployment.
+
+Calling a file "immutable" was describing the write pattern and quietly implying a persistence guarantee it never had.
+
+**Fixed by** adding a Postgres backend behind the same three-function interface (`append_entry` / `load_log` / `mark_recovered`), selected by `DATABASE_URL`, with the JSONL file kept as the zero-setup path for local development and tests. `render.yaml` now provisions the database and wires the connection string in.
+
+This also closed a requirement the file backend could never satisfy. The brief (§6) asks for a unique constraint on `event_id` so a duplicate delivery cannot double-count a recovery; a file cannot enforce that, so idempotency was previously a convention held up by application code. It is now `event_id TEXT PRIMARY KEY` with `ON CONFLICT DO NOTHING` — enforced by the database whatever the application does. `/healthz` reports which backend is live, so "is this actually persisted?" is a question with an answer rather than an assumption.
+
+### 12. Python 3.8 blocked the official SDK
 
 The free-tier provider's SDK requires Python 3.9+, and `pip` downloads were timing out.
 
@@ -294,7 +314,7 @@ python data/generate_dataset.py --count 60 --seed 42
 ## Testing
 
 ```bash
-python -m pytest        # 90 tests
+python -m pytest        # 98 tests
 ```
 
 Covers the guardrail rules including the revoked-mandate override, exposure caps enforced across a batch, webhook signature rejection and idempotent duplicate delivery, rate-limit backoff, provider routing, and a guard proving the suite never reaches a live API.
@@ -321,7 +341,7 @@ Deployment is a correctness requirement here, not a convenience: a signature-ver
 |---|---|
 | Core recovery loop | Built |
 | Compliance guardrails | Built — deterministic, tested |
-| Audit log | Built — immutable, idempotent, exportable |
+| Audit log | Built — durable (Postgres), idempotent, exportable |
 | Human escalation routing | Built — confidence threshold |
 | Kill switch | Built |
 | Audit console | Built — deployed |
@@ -340,4 +360,5 @@ Stated plainly, because a reviewer will find them anyway:
 - **Accuracy is small-sample and provider-dependent.** 60 cases on one model. Treat it as directional.
 - **The mandate-state guardrail did not fire in the measured run** — the model never recommended retrying a revoked mandate, so the rule had nothing to catch. It is covered by explicit tests rather than left to a dataset coincidence.
 - **Test-mode Razorpay only.** No real money moves at any point.
+- **The audit log is durable only where a database is configured.** With `DATABASE_URL` set it is Postgres-backed and survives restarts; without it, the JSONL fallback lives on local disk and should not be relied on in ephemeral hosting.
 - **One verified recovery, not a recovery rate.** ₹9,999 was confirmed end to end by a real webhook. That proves the mechanism, not a conversion percentage — claiming a recovery rate would need real customers, not synthetic ones.
