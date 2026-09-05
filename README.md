@@ -506,6 +506,6 @@ Deployment is a correctness requirement here, not a convenience: a signature-ver
 
 **Synthetic mandate failures with real NPCI decline codes. Razorpay runs in test mode — real API, real signed webhooks, no real money.**
 
-[Live Demo](https://mandate-recovery-agent.onrender.com) · [Audit Console](https://mandate-recovery-agent.onrender.com/console) · [Pitch](https://mandate-recovery-agent.onrender.com/pitch)
+[Live Demo](https://mandate-recovery-agent.onrender.com) · [Audit Console](https://mandate-recovery-agent.onrender.com/console)
 
 </div>
