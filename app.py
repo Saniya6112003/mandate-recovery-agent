@@ -41,6 +41,12 @@ def pitch():
     return FileResponse(STATIC_DIR / "pitch.html")
 
 
+@app.get("/deck", include_in_schema=False)
+def deck():
+    """Presenter deck — manually advanced, with speaker notes."""
+    return FileResponse(STATIC_DIR / "deck.html")
+
+
 @app.get("/console", include_in_schema=False)
 def console():
     """Audit console — every decision, verdict and outcome."""
