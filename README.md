@@ -6,7 +6,7 @@ An explainable AI agent that recovers failed UPI Autopay mandate debits — diag
 
 ### Live: [mandate-recovery-agent.onrender.com](https://mandate-recovery-agent.onrender.com)
 
-The audit console runs there against real Razorpay test-mode infrastructure. A ₹9,999 recovery on it was confirmed by a webhook Razorpay actually signed and delivered — not a simulated event. `POST /demo/run-batch?limit=3` runs a live batch; the free instance sleeps when idle, so the first request takes ~30s to wake.
+The audit console runs there against real Razorpay test-mode infrastructure, backed by a Postgres audit log. The recovery shown on it was confirmed by a webhook Razorpay actually signed and delivered — not a simulated event. `POST /demo/run-batch?limit=3` runs a live batch; the free instance sleeps when idle, so the first request takes ~30s to wake.
 
 ---
 
@@ -120,26 +120,29 @@ Duplicate webhook deliveries are idempotent either way — Razorpay's docs warn 
 
 | Metric | Value |
 |---|---|
-| Cause diagnosis accuracy | **97%** (58/60) |
-| Guardrail overrides | **5** |
-| Escalated to human review | **4** |
+| Cause diagnosis accuracy | **93–97%** across three runs |
+| Guardrail overrides | **4–5** per run, across 3 distinct rules |
+| Escalated to human review | **3–4** |
 | ₹ at risk across the batch | **₹274,640** |
-| False-positive cost | **₹12,998** (2 confident-but-wrong cases) |
+| False-positive cost | **₹13,000** or below (2–4 confident-but-wrong cases) |
+
+Figures are given as ranges because the model is not deterministic and each run differs. A single run's numbers are quoted only where the point depends on that run.
 
 Errors concentrate on the genuinely ambiguous codes — `B3` ("transaction not permitted to the account") and `QA` (mandate paused by user) — not on the common failure modes, which score 100%.
 
 ### The finding that matters
 
-Accuracy is the least interesting number here. This is the important one, measured across two independent 60-case runs:
+Accuracy is the least interesting number here. This is the important one, measured across three independent 60-case runs:
 
-| Run | Accuracy | Confidence when **right** | Confidence when **wrong** |
-|---|---|---|---|
-| A | 93% | 0.898 | 0.895 |
-| B | 97% | 0.889 | **0.940** |
+| Run | Accuracy | Confidence when **right** | Confidence when **wrong** | Gap |
+|---|---|---|---|---|
+| A | 93% | 0.898 | 0.895 | +0.003 |
+| B | 97% | 0.889 | **0.940** | −0.051 |
+| C | 95% | 0.894 | 0.880 | +0.014 |
 
-In run A the two were indistinguishable. In run B the model was **more confident about its mistakes than its correct answers**.
+In run A the two were indistinguishable. In run B the model was **more confident about its mistakes than its correct answers**. In run C the gap reappeared, tiny, in the other direction.
 
-The precise gap is noisy — with only 2–4 wrong cases per run, that statistic carries little weight on its own, and it would be dishonest to quote either figure as a stable measurement. What survives across both runs is the robust claim: **self-reported confidence does not reliably separate correct answers from incorrect ones.** It never behaved like a probability in either direction.
+The gap is noisy by construction — with only 2–4 wrong cases per run, it would be dishonest to quote any single figure as a stable measurement, and the sign flips between runs. That instability *is* the result. What survives all three is the robust claim: **self-reported confidence does not reliably separate correct answers from incorrect ones.** It never behaved like a probability in any run, in either direction.
 
 That is what "`confidence` is self-report, not a calibrated probability" means in practice, and it is the entire justification for this system's architecture. A recovery agent that trusted that number would route on noise. Instead:
 
@@ -159,16 +162,22 @@ This happened in two acts, and the first one matters as much as the second.
 
 That was not a bug. No signature-verified `payment_link.paid` event had arrived — the development network blocks inbound tunnelling, so Razorpay could not reach the local instance. The money was real and the agent still refused to count it. Marking it recovered would have meant trusting an API poll or the executor's own success, which is precisely the self-reported number this project exists to avoid.
 
-**Act two — the proof.** Once deployed to a public endpoint, the same flow ran again. Razorpay's servers delivered a real signed webhook, the app verified the HMAC, resolved `MID21C56811CD-a0-2b801868` back to its mandate, and flipped the outcome:
+**Act two — the proof.** Once deployed to a public endpoint, the same flow ran again. Razorpay's servers delivered a real signed webhook, the app verified the HMAC, resolved the per-attempt reference back to its mandate, and flipped the outcome:
 
 ```
-Razorpay      plink_TYKDtjsrSokjEX   status = paid        INR 9,999
-Audit log     MID21C56811CD          outcome = recovered  INR 9,999
+Razorpay      payment link   status = paid        (webhook signed and delivered)
+Audit log     MID6EA8B317FA  outcome = recovered  INR 2,999
 ```
 
 Nothing in that chain was simulated: real model reasoning, a real Payment Link created by the deployed service, a real payment, and a webhook signed by Razorpay and verified on arrival.
 
 The contrast is the point. The same system, the same real money — `pending` without proof, `recovered` with it. The ₹-recovered figure moves only on cryptographic evidence, and it under-reports rather than overstates when that evidence is missing.
+
+**A third act, briefly.** The first verified recovery was ₹9,999, and a redeploy destroyed it — see problem 11 below. That is what forced the audit log onto Postgres. The current recovery is on durable storage and survives restarts.
+
+### The free-tier cold start
+
+A webhook delivery failed once in testing for an unglamorous reason: the free Render instance spins down when idle, and Razorpay's delivery timed out against a cold container. Worth stating rather than hiding, because the system's response to it was correct — the case stayed `pending`. It did not guess, and it did not fall back to trusting the API. Razorpay retries, and a warm instance takes the delivery. In production this runs warm, with those retries as the backstop.
 
 ### What the guardrails actually caught
 
@@ -361,4 +370,5 @@ Stated plainly, because a reviewer will find them anyway:
 - **The mandate-state guardrail did not fire in the measured run** — the model never recommended retrying a revoked mandate, so the rule had nothing to catch. It is covered by explicit tests rather than left to a dataset coincidence.
 - **Test-mode Razorpay only.** No real money moves at any point.
 - **The audit log is durable only where a database is configured.** With `DATABASE_URL` set it is Postgres-backed and survives restarts; without it, the JSONL fallback lives on local disk and should not be relied on in ephemeral hosting.
-- **One verified recovery, not a recovery rate.** ₹9,999 was confirmed end to end by a real webhook. That proves the mechanism, not a conversion percentage — claiming a recovery rate would need real customers, not synthetic ones.
+- **One verified recovery, not a recovery rate.** A recovery was confirmed end to end by a real webhook. That proves the mechanism, not a conversion percentage — claiming a recovery rate would need real customers, not synthetic ones.
+- **The deployed instance is free-tier.** It sleeps when idle, so a webhook can time out against a cold start. The system handles that correctly (the case stays `pending`), but a production deployment would run warm.
