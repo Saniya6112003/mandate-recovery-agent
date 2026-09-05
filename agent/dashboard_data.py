@@ -87,8 +87,53 @@ def build_payload() -> dict[str, Any]:
             "threshold": CONFIDENCE_ESCALATION_THRESHOLD,
         },
         "by_cause": _by_cause(scored),
+        "by_action": _counted(rows, "action"),
+        "by_outcome": _counted(rows, "outcome"),
+        "by_code": _counted(rows, "code", limit=8),
+        "overrides_by_rule": _override_rules(rows),
+        "confidence_points": [
+            {"c": r["confidence"], "ok": r["match"]} for r in scored
+        ],
+        "money": {
+            "recovered": amount_recovered,
+            "in_flight": sum(r["amount"] or 0 for r in rows if r["outcome"] == "pending"),
+            "escalated": sum(r["amount"] or 0 for r in rows if r["outcome"] == "escalated"),
+        },
         "rows": list(reversed(rows)),
     }
+
+
+def _counted(rows: list[dict], field: str, limit: int | None = None) -> list[dict]:
+    counts: dict[str, int] = {}
+    amounts: dict[str, float] = {}
+    for row in rows:
+        key = row.get(field)
+        if key is None:
+            continue
+        counts[key] = counts.get(key, 0) + 1
+        amounts[key] = amounts.get(key, 0) + (row.get("amount") or 0)
+
+    out = [
+        {"key": k, "n": n, "amount": amounts[k], "share": n / len(rows) if rows else 0}
+        for k, n in counts.items()
+    ]
+    out.sort(key=lambda r: -r["n"])
+    return out[:limit] if limit else out
+
+
+def _override_rules(rows: list[dict]) -> list[dict]:
+    """Group overrides by which rule fired — the reason string is prefixed
+    with the rule name, e.g. `retry_cap_exceeded: ...`.
+    """
+    counts: dict[str, int] = {}
+    for row in rows:
+        if not row["overridden"] or not row["override_reason"]:
+            continue
+        rule = row["override_reason"].split(":")[0].strip()
+        counts[rule] = counts.get(rule, 0) + 1
+    return sorted(
+        ({"rule": k, "n": v} for k, v in counts.items()), key=lambda r: -r["n"]
+    )
 
 
 def _by_cause(scored: list[dict]) -> list[dict]:

@@ -94,6 +94,28 @@
   .legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;color:var(--muted);margin-bottom:16px}
   .legend span b{font-weight:600;color:var(--ink)}
 
+  /* money bar */
+  .moneybar{display:flex;height:44px;border-radius:9px;overflow:hidden;border:1px solid var(--line);
+    background:var(--panel)}
+  .moneybar i{display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:650;
+    color:#fff;min-width:0;overflow:hidden;white-space:nowrap;transition:flex-grow .3s}
+  .mlegend{display:flex;flex-wrap:wrap;gap:20px;margin-top:11px;font-size:12.5px;color:var(--muted)}
+  .mlegend span{display:flex;align-items:center;gap:7px}
+  .dot{width:10px;height:10px;border-radius:3px;flex:none}
+
+  /* charts */
+  .cols{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
+  .chart{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:16px 18px}
+  .chart h3{font-size:14px;margin:0 0 3px;letter-spacing:-.01em}
+  .chart .cnote{font-size:12.5px;color:var(--muted);margin:0 0 14px;line-height:1.45}
+  .row{display:grid;grid-template-columns:130px 1fr 54px;gap:10px;align-items:center;
+    padding:5px 0;font-size:13px}
+  .row .rl{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .track{height:9px;background:var(--bg);border:1px solid var(--line);border-radius:5px;overflow:hidden}
+  .track i{display:block;height:100%;background:var(--accent);border-radius:4px}
+  .track i.full{background:var(--ok)} .track i.low{background:var(--stop)} .track i.mid{background:var(--warn)}
+  .rv{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;font-size:12.5px}
+
   .empty{background:var(--panel);border:1px dashed var(--line);border-radius:11px;
     padding:34px;text-align:center;color:var(--muted)}
   .empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:7px}
@@ -130,6 +152,40 @@
     <h2>Results</h2>
     <p class="h2note">From the cases processed so far.</p>
     <div class="metrics" id="metrics"></div>
+  </section>
+
+  <section id="moneySec" hidden>
+    <h2>Where the money stands</h2>
+    <p class="h2note">Total value of the failed payments in this batch, split by what happened to each.</p>
+    <div class="moneybar" id="moneyBar"></div>
+    <div class="mlegend" id="moneyLegend"></div>
+  </section>
+
+  <section id="chartsSec" hidden>
+    <h2>Breakdown</h2>
+    <p class="h2note">Where the agent is accurate, what it decided to do, and which rules had to step in.</p>
+    <div class="cols">
+      <div class="chart">
+        <h3>Accuracy by real cause</h3>
+        <p class="cnote">Errors concentrate on genuinely ambiguous bank codes, not on common failures.</p>
+        <div id="causeChart"></div>
+      </div>
+      <div class="chart">
+        <h3>What the agent decided to do</h3>
+        <p class="cnote">The action actually taken, after the rules had their say.</p>
+        <div id="actionChart"></div>
+      </div>
+      <div class="chart">
+        <h3>Most common bank decline codes</h3>
+        <p class="cnote">Real NPCI/UPI response codes from the failed debits.</p>
+        <div id="codeChart"></div>
+      </div>
+      <div class="chart" id="ruleWrap">
+        <h3>Which rules blocked the AI</h3>
+        <p class="cnote">Compliance refusing the model's recommendation.</p>
+        <div id="ruleChart"></div>
+      </div>
+    </div>
   </section>
 
   <section id="calibSec" hidden>
@@ -209,6 +265,61 @@ function render(d){
       `${s.false_positive_count} case(s) where the AI was sure and still got the cause wrong.`,
       s.false_positive_count?"flag":"")
   ].join("");
+
+  // ---- money split ----
+  const m = d.money || {};
+  const mTotal = (m.recovered||0) + (m.in_flight||0) + (m.escalated||0);
+  if (mTotal > 0){
+    document.getElementById("moneySec").hidden = false;
+    const segs = [
+      ["Recovered",      m.recovered, "var(--ok)"],
+      ["Link sent, awaiting payment", m.in_flight, "var(--accent)"],
+      ["With a human",   m.escalated, "var(--warn)"]
+    ].filter(x => x[1] > 0);
+    document.getElementById("moneyBar").innerHTML = segs.map(([l,v,c]) =>
+      `<i style="flex:${v} 1 0;background:${c}" title="${l}: ${inr(v)}">${
+        v/mTotal > 0.13 ? inr(v) : ""}</i>`).join("");
+    document.getElementById("moneyLegend").innerHTML = segs.map(([l,v,c]) =>
+      `<span><i class="dot" style="background:${c}"></i>${l} — <b>${inr(v)}</b>
+        (${Math.round(v/mTotal*100)}%)</span>`).join("");
+  }
+
+  // ---- breakdown charts ----
+  const bar = (label, pct, value, cls) => `<div class="row">
+      <div class="rl" title="${esc(label)}">${esc(label)}</div>
+      <div class="track"><i class="${cls||""}" style="width:${Math.max(pct*100,1.5).toFixed(1)}%"></i></div>
+      <div class="rv">${value}</div></div>`;
+
+  let anyChart = false;
+  if (d.by_cause && d.by_cause.length){
+    anyChart = true;
+    document.getElementById("causeChart").innerHTML = d.by_cause.map(c =>
+      bar(nice(c.cause), c.accuracy, Math.round(c.accuracy*100)+"%",
+          c.accuracy >= 0.999 ? "full" : (c.accuracy < 0.5 ? "low" : "mid"))
+      ).join("") ;
+  }
+  if (d.by_action && d.by_action.length){
+    anyChart = true;
+    const max = Math.max(...d.by_action.map(a=>a.n));
+    document.getElementById("actionChart").innerHTML = d.by_action.map(a =>
+      bar(ACTION[a.key] ? ACTION[a.key].replace(/^Send the customer a/,"Send a") : nice(a.key),
+          a.n/max, a.n)).join("");
+  }
+  if (d.by_code && d.by_code.length){
+    anyChart = true;
+    const max = Math.max(...d.by_code.map(a=>a.n));
+    document.getElementById("codeChart").innerHTML = d.by_code.map(a =>
+      bar(a.key, a.n/max, a.n)).join("");
+  }
+  if (d.overrides_by_rule && d.overrides_by_rule.length){
+    anyChart = true;
+    const max = Math.max(...d.overrides_by_rule.map(a=>a.n));
+    document.getElementById("ruleChart").innerHTML = d.overrides_by_rule.map(a =>
+      bar(nice(a.rule), a.n/max, a.n, "low")).join("");
+  } else {
+    document.getElementById("ruleWrap").hidden = true;
+  }
+  if (anyChart) document.getElementById("chartsSec").hidden = false;
 
   if (s.confidence_when_right != null && s.confidence_when_wrong != null){
     document.getElementById("calibSec").hidden = false;
