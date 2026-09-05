@@ -35,6 +35,12 @@ def home():
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@app.get("/pitch", include_in_schema=False)
+def pitch():
+    """Self-playing pitch film — timed scenes, narration, live figures."""
+    return FileResponse(STATIC_DIR / "pitch.html")
+
+
 @app.get("/console", include_in_schema=False)
 def console():
     """Audit console — every decision, verdict and outcome."""

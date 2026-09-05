@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandate Recovery Agent — Pitch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#02042B; --navy2:#071440; --blue:#3395FF; --blue-l:#8CC5FF;
+  --red:#FF5A5F; --green:#3DDC97; --amber:#FFC24B;
+  --ink:#EAF2FF; --dim:#93A9C9; --faint:#5F79A0;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--navy); color:var(--ink);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  display:grid; place-items:center;
+}
+#stage{
+  position:relative; width:100vw; height:100vh; max-width:100vw;
+  overflow:hidden;
+  background:
+    radial-gradient(1100px 520px at 76% 10%, rgba(51,149,255,.20), transparent 60%),
+    radial-gradient(800px 500px at 12% 88%, rgba(61,220,151,.10), transparent 60%),
+    linear-gradient(168deg,#02042B 0%,#071440 60%,#0C2A66 100%);
+}
+.scene{
+  position:absolute; inset:0; display:none;
+  padding:6vh 7vw; flex-direction:column; justify-content:center;
+}
+.scene.on{display:flex}
+.kick{
+  font-size:clamp(11px,1.1vw,14px); font-weight:800; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--blue); margin-bottom:2.2vh;
+}
+h1{font-size:clamp(30px,5.4vw,74px); line-height:1.05; letter-spacing:-.035em; font-weight:900; margin-bottom:2.4vh}
+h2{font-size:clamp(24px,3.8vw,50px); line-height:1.12; letter-spacing:-.03em; font-weight:800; margin-bottom:2.2vh}
+p.big{font-size:clamp(15px,1.75vw,25px); color:#C4D6F0; max-width:30ch; line-height:1.5}
+p.med{font-size:clamp(14px,1.35vw,19px); color:#AFC4E2; max-width:56ch; line-height:1.6}
+.accent{color:var(--blue-l)}
+.grad{background:linear-gradient(96deg,#7CC0FF,#B9DCFF 55%,#8CFFD0);
+  -webkit-background-clip:text; background-clip:text; color:transparent}
+
+/* animation utility */
+.an{opacity:0; transform:translateY(26px); animation:rise .85s cubic-bezier(.2,.7,.3,1) forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+.d1{animation-delay:.18s}.d2{animation-delay:.42s}.d3{animation-delay:.68s}
+.d4{animation-delay:.94s}.d5{animation-delay:1.2s}.d6{animation-delay:1.5s}
+
+/* code chips */
+.codes{display:flex;flex-wrap:wrap;gap:12px;margin-top:3vh}
+.cc{border:1px solid rgba(140,197,255,.34); background:rgba(51,149,255,.10);
+  border-radius:11px; padding:12px 16px; min-width:150px}
+.cc b{display:block;font-family:var(--mono);font-size:clamp(15px,1.5vw,20px);color:var(--blue-l)}
+.cc span{font-size:clamp(11px,1vw,13.5px);color:#9FB6D6}
+
+/* avatars */
+.avs{display:flex;gap:2.4vw;flex-wrap:wrap;margin-top:3vh}
+.av{flex:1 1 240px;max-width:340px;border:1px solid rgba(255,255,255,.11);border-radius:18px;
+  padding:2.6vh 1.8vw;background:rgba(255,255,255,.035);backdrop-filter:blur(6px)}
+.av .face{width:74px;height:74px;margin-bottom:1.8vh}
+.av h3{font-size:clamp(17px,1.7vw,24px);font-weight:800;letter-spacing:-.02em;margin-bottom:5px}
+.av .role{font-size:clamp(11px,.95vw,13px);letter-spacing:.13em;text-transform:uppercase;
+  font-weight:700;margin-bottom:1.2vh}
+.av p{font-size:clamp(12.5px,1.15vw,16px);color:#B2C7E4;line-height:1.55}
+.av.naya{border-color:rgba(51,149,255,.42)} .av.naya .role{color:var(--blue)}
+.av.raksha{border-color:rgba(255,90,95,.42)} .av.raksha .role{color:var(--red)}
+.av.lekha{border-color:rgba(61,220,151,.42)} .av.lekha .role{color:var(--green)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes flick{0%,100%{opacity:1}50%{opacity:.45}}
+.sp{animation:spin 9s linear infinite;transform-origin:center}
+.bob{animation:bob 3.1s ease-in-out infinite}
+.flick{animation:flick 1.7s ease-in-out infinite}
+
+/* trace */
+.trace{margin-top:2vh;max-width:1000px;width:100%}
+.tl{display:flex;gap:18px;padding:1.5vh 0;border-top:1px solid rgba(255,255,255,.1);
+  opacity:0;transform:translateX(-16px);animation:slidein .6s cubic-bezier(.2,.7,.3,1) forwards}
+@keyframes slidein{to{opacity:1;transform:none}}
+.tw{flex:0 0 120px;font-size:clamp(10px,.92vw,12.5px);letter-spacing:.1em;text-transform:uppercase;
+  font-weight:800;color:#7E96BC;padding-top:5px}
+.tv{flex:1;font-size:clamp(14px,1.4vw,20px)}
+.tv .sub{color:#9FB6D6;font-size:clamp(12px,1.08vw,15.5px);margin-top:6px;line-height:1.5}
+.chip{display:inline-block;font-size:clamp(11px,1vw,14px);font-weight:800;padding:5px 13px;border-radius:99px}
+.k-b{background:rgba(51,149,255,.2);color:var(--blue-l)}
+.k-r{background:rgba(255,90,95,.2);color:#FF9DA1}
+.k-g{background:rgba(61,220,151,.2);color:#7FEFC0}
+.slam{animation:slam .55s cubic-bezier(.2,1.6,.4,1) forwards}
+@keyframes slam{0%{transform:scale(2.4);opacity:0}60%{transform:scale(.94)}100%{transform:scale(1);opacity:1}}
+.verdict{margin-top:2.4vh;padding:1.8vh 22px;border-radius:14px;
+  background:rgba(255,90,95,.11);border:1px solid rgba(255,90,95,.32);
+  font-size:clamp(13.5px,1.3vw,19px);color:#FFC9CB;max-width:1000px}
+.verdict b{color:#fff}
+
+/* numbers */
+.nums{display:flex;gap:2.6vw;flex-wrap:wrap;margin-top:3vh}
+.num b{display:block;font-size:clamp(34px,5.6vw,74px);font-weight:900;letter-spacing:-.045em;
+  line-height:1;font-variant-numeric:tabular-nums}
+.num span{font-size:clamp(12px,1.1vw,15px);color:#9FB6D6;margin-top:8px;display:block}
+.num.g b{color:var(--green)} .num.r b{color:var(--red)} .num.b b{color:var(--blue-l)}
+
+/* calib */
+.ctab{margin-top:2.4vh;border-collapse:collapse;font-size:clamp(13px,1.3vw,19px);max-width:840px;width:100%}
+.ctab th{text-align:left;padding:10px 14px;font-size:clamp(10.5px,.95vw,13px);letter-spacing:.09em;
+  text-transform:uppercase;color:#7E96BC;border-bottom:1px solid rgba(255,255,255,.14)}
+.ctab td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.07);font-variant-numeric:tabular-nums}
+.ctab .hi{color:var(--red);font-weight:800}
+
+/* proof */
+.proof{display:flex;gap:2vw;flex-wrap:wrap;margin-top:2.6vh;width:100%;max-width:1000px}
+.pb{flex:1 1 300px;border-radius:16px;padding:2.6vh 1.9vw;border:1px solid}
+.pb.no{border-color:rgba(255,90,95,.4);background:rgba(255,90,95,.09)}
+.pb.yes{border-color:rgba(61,220,151,.4);background:rgba(61,220,151,.09)}
+.pb .lab{font-size:clamp(10.5px,.95vw,13px);letter-spacing:.11em;text-transform:uppercase;font-weight:800;margin-bottom:10px}
+.pb.no .lab{color:#FF9DA1} .pb.yes .lab{color:#7FEFC0}
+.pb .val{font-size:clamp(21px,2.7vw,38px);font-weight:900;letter-spacing:-.03em;margin-bottom:9px}
+.pb p{font-size:clamp(12.5px,1.15vw,16px);color:#B2C7E4;line-height:1.55}
+
+/* challenges */
+.chs{display:grid;grid-template-columns:repeat(auto-fit,minmax(275px,1fr));gap:14px;margin-top:2.4vh;
+  max-width:1120px;width:100%}
+.chx{border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:2vh 1.4vw;
+  background:rgba(255,255,255,.035)}
+.chx .p{font-size:clamp(12.5px,1.15vw,16px);color:#FFA8AC;font-weight:700;margin-bottom:8px}
+.chx .f{font-size:clamp(12px,1.1vw,15px);color:#B2C7E4;line-height:1.55}
+.chx .f b{color:var(--green)}
+
+/* controls */
+#hud{position:fixed;left:0;right:0;bottom:0;z-index:60;padding:14px 22px;
+  background:linear-gradient(to top,rgba(2,4,43,.94),transparent);
+  display:flex;align-items:center;gap:16px;font-size:13px;color:#8FA8CC;
+  opacity:0;transition:opacity .3s}
+#stage:hover ~ #hud, #hud:hover, #hud.show{opacity:1}
+#bar{flex:1;height:4px;background:rgba(255,255,255,.14);border-radius:3px;overflow:hidden}
+#fill{height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .25s linear}
+#hud button{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#DDE9FA;
+  border-radius:8px;padding:7px 14px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+#hud button:hover{background:rgba(255,255,255,.19)}
+#cap{position:fixed;left:50%;transform:translateX(-50%);bottom:9vh;z-index:55;
+  max-width:78vw;text-align:center;font-size:clamp(13px,1.35vw,19px);line-height:1.5;
+  background:rgba(2,4,43,.82);border:1px solid rgba(255,255,255,.13);border-radius:12px;
+  padding:12px 22px;color:#E6F0FF;backdrop-filter:blur(8px);display:none}
+#cap.on{display:block}
+#sceneNo{font-variant-numeric:tabular-nums;min-width:52px}
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- 1 HOOK -->
+  <section class="scene" data-dur="13">
+    <div class="kick an">Razorpay AI Buildathon · Track 3 — AI Revenue Recovery</div>
+    <h1 class="an d1">The customer already<br>said <span class="grad">yes</span>.</h1>
+    <p class="big an d2">The mandate is signed. The money is owed. And on collection day, the
+      debit silently fails — nobody calls anyone, and the merchant simply loses it.</p>
+  </section>
+
+  <!-- 2 SITUATION -->
+  <section class="scene" data-dur="30">
+    <div class="kick an">The situation</div>
+    <h2 class="an d1">UPI Autopay doesn't fail<br>like a card does.</h2>
+    <p class="med an d2">A card mandate is a stored credential. UPI Autopay needs a live bank
+      approval on <em>every single debit</em> — so it fails several times more often, for reasons
+      that have no card equivalent.</p>
+    <div class="codes">
+      <div class="cc an d3"><b>IE</b><span>Funds blocked by another mandate</span></div>
+      <div class="cc an d4"><b>VA</b><span>Mandate revoked</span></div>
+      <div class="cc an d5"><b>QA</b><span>Paused by the customer</span></div>
+      <div class="cc an d6"><b>MA0</b><span>Mandate no longer exists</span></div>
+    </div>
+    <p class="med an d6" style="margin-top:2.4vh"><b class="accent">For several of these, retrying
+      isn't merely useless — it isn't permitted.</b></p>
+  </section>
+
+  <!-- 3 TASK -->
+  <section class="scene" data-dur="18">
+    <div class="kick an">The task</div>
+    <h2 class="an d1">Three things at once.</h2>
+    <div class="codes">
+      <div class="cc an d2" style="min-width:270px"><b>1 · Diagnose</b><span>Why did <em>this</em> debit fail?</span></div>
+      <div class="cc an d3" style="min-width:270px"><b>2 · Stay lawful</b><span>RBI notice windows, retry caps, mandate state</span></div>
+      <div class="cc an d4" style="min-width:270px"><b>3 · Prove it</b><span>Show the rupee actually arrived</span></div>
+    </div>
+    <p class="med an d5" style="margin-top:3vh">So I built an agent with three parts that decide.</p>
+  </section>
+
+  <!-- 4 AVATARS -->
+  <section class="scene" data-dur="36">
+    <div class="kick an">The action</div>
+    <h2 class="an d1">Three who decide.</h2>
+    <div class="avs">
+      <div class="av naya an d2">
+        <svg class="face" viewBox="0 0 80 80" fill="none">
+          <circle cx="40" cy="40" r="30" stroke="#3395FF" stroke-width="2.5" opacity=".45"/>
+          <g class="sp"><circle cx="40" cy="10" r="4" fill="#8CC5FF"/><circle cx="70" cy="40" r="3" fill="#3395FF"/>
+            <circle cx="40" cy="70" r="3" fill="#3395FF" opacity=".6"/><circle cx="10" cy="40" r="3" fill="#8CC5FF" opacity=".7"/></g>
+          <circle cx="40" cy="40" r="13" fill="#3395FF" opacity=".9" class="flick"/>
+          <circle cx="35" cy="37" r="2.6" fill="#02042B"/><circle cx="46" cy="37" r="2.6" fill="#02042B"/>
+        </svg>
+        <div class="role">The Analyst</div><h3>NAYA</h3>
+        <p>Reads the raw decline code, retry history, amount and mandate age. Proposes one bounded
+          action. Fast, articulate — and <b class="accent">sometimes confidently wrong.</b></p>
+      </div>
+      <div class="av raksha an d4">
+        <svg class="face" viewBox="0 0 80 80" fill="none">
+          <path d="M40 8 L67 19 V42 C67 58 54 68 40 73 C26 68 13 58 13 42 V19 Z"
+                stroke="#FF5A5F" stroke-width="2.6" fill="rgba(255,90,95,.13)"/>
+          <path d="M28 40 L36 49 L53 31" stroke="#FF5A5F" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="role">The Guard</div><h3>RAKSHA</h3>
+        <p>Not AI. Deterministic compliance code. Reads the mandate's real status from the bank —
+          not Naya's opinion of it. <b style="color:#FF9DA1">Never asks how confident she was.</b></p>
+      </div>
+      <div class="av lekha an d6">
+        <svg class="face" viewBox="0 0 80 80" fill="none">
+          <rect x="16" y="12" width="48" height="56" rx="6" stroke="#3DDC97" stroke-width="2.6" fill="rgba(61,220,151,.1)"/>
+          <line x1="26" y1="28" x2="54" y2="28" stroke="#3DDC97" stroke-width="2.6" opacity=".65"/>
+          <line x1="26" y1="39" x2="54" y2="39" stroke="#3DDC97" stroke-width="2.6" opacity=".45"/>
+          <g class="bob"><path d="M27 51 L36 60 L56 40" stroke="#3DDC97" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+        </svg>
+        <div class="role">The Auditor</div><h3>LEKHA</h3>
+        <p>Writes every decision immutably — and refuses to write the word <b style="color:#7FEFC0">recovered</b>
+          until a cryptographically signed webhook proves the money arrived.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 GUARDRAIL -->
+  <section class="scene" data-dur="44" id="sc-trace">
+    <div class="kick an">The moment that matters</div>
+    <h2 class="an d1">When the AI is <span style="color:#FF9DA1">confidently wrong</span>.</h2>
+    <div class="trace">
+      <div class="tl" style="animation-delay:.7s"><div class="tw">Input</div><div class="tv">
+        ₹4,999 debit failed &nbsp;<span class="chip k-b">code QA</span>
+        <div class="sub">Retry 1 of 3 · mandate 214 days old · notice window satisfied</div></div></div>
+      <div class="tl" style="animation-delay:2.6s"><div class="tw">Naya thinks</div><div class="tv">
+        authentication failure — <b style="color:#8CC5FF">96% confident</b>
+        <div class="sub">"MPIN validation appears to have failed; a prompt retry should succeed."</div></div></div>
+      <div class="tl" style="animation-delay:5s"><div class="tw">Naya proposes</div><div class="tv">
+        <span class="chip k-b">retry_now</span>
+        <div class="sub">Charge the customer's account again, immediately.</div></div></div>
+      <div class="tl" style="animation-delay:7.6s"><div class="tw">Raksha says</div><div class="tv">
+        <span class="chip k-r slam" style="animation-delay:7.7s">BLOCKED</span>
+        <div class="sub">Authoritative mandate status is <b style="color:#fff">paused</b>. QA means the
+          customer paused this mandate — it cannot be debited at all. The diagnosis was wrong
+          <em>and</em> the action was unlawful.</div></div></div>
+      <div class="tl" style="animation-delay:11.4s"><div class="tw">Executed</div><div class="tv">
+        <span class="chip k-g">notify the customer instead</span>
+        <div class="sub">Rerouted, with the reason written verbatim into the audit trail.</div></div></div>
+    </div>
+    <div class="verdict an" style="animation-delay:14s">
+      <b>Raksha never looked at the confidence score.</b> She checked mandate state independently —
+      which is why a 96%-confident misdiagnosis still could not produce an unlawful retry.</div>
+  </section>
+
+  <!-- 6 CALIBRATION -->
+  <section class="scene" data-dur="34">
+    <div class="kick an">Why it's built that way</div>
+    <h2 class="an d1">Its confidence tells you<br>nothing about being right.</h2>
+    <p class="med an d2">Across three sixty-case runs I measured the model's confidence when it was
+      right, against its confidence when it was wrong.</p>
+    <table class="ctab an d3">
+      <tr><th>Run</th><th>Accuracy</th><th>Confident when right</th><th>when wrong</th><th>Gap</th></tr>
+      <tr><td>A</td><td>93%</td><td>0.898</td><td>0.895</td><td>+0.003</td></tr>
+      <tr><td>B</td><td>97%</td><td>0.889</td><td class="hi">0.940</td><td class="hi">−0.051</td></tr>
+      <tr><td>C</td><td>95%</td><td>0.894</td><td>0.880</td><td>+0.014</td></tr>
+    </table>
+    <p class="med an d5" style="margin-top:2.4vh">The gap sits inside the noise and <b class="accent">changes
+      sign between runs</b>. With 2–4 wrong cases per run no single figure is a real measurement —
+      and that instability <em>is</em> the finding. That is exactly why Raksha is deterministic code,
+      not a better prompt.</p>
+  </section>
+
+  <!-- 7 PROOF -->
+  <section class="scene" data-dur="36">
+    <div class="kick an">Measured money</div>
+    <h2 class="an d1">The number only moves on proof.</h2>
+    <div class="proof">
+      <div class="pb no an d2"><div class="lab">Razorpay says paid — we didn't count it</div>
+        <div class="val">outcome: pending</div>
+        <p>A real test-mode payment, genuinely made. Trusting an API poll — or trusting my own call
+          succeeding — is exactly the self-reported number this project exists to avoid.</p></div>
+      <div class="pb yes an d4"><div class="lab">Signed webhook verified</div>
+        <div class="val">outcome: recovered</div>
+        <p>Razorpay signed and delivered <span style="font-family:var(--mono)">payment_link.paid</span>,
+          the HMAC verified — and only then did the rupee figure move.</p></div>
+    </div>
+    <p class="med an d6" style="margin-top:2.6vh">Same system. Same real money.
+      <b class="accent">Pending without proof. Recovered with it.</b></p>
+  </section>
+
+  <!-- 8 CHALLENGES -->
+  <section class="scene" data-dur="38">
+    <div class="kick an">Build challenges</div>
+    <h2 class="an d1">What broke, and how I fixed it.</h2>
+    <div class="chs">
+      <div class="chx an d2"><div class="p">My decline codes were fake.</div>
+        <div class="f"><b>Fixed:</b> they were card-style ISO codes with invented prefixes. Re-verified
+          every one against a bank's published UPI response code list.</div></div>
+      <div class="chx an d3"><div class="p">The guardrail read the answer key.</div>
+        <div class="f"><b>Fixed:</b> it checked a scoring-only label. Added authoritative mandate
+          status the model never sees — so it blocks even when the diagnosis is wrong.</div></div>
+      <div class="chx an d4"><div class="p">The model hallucinated the code book. 42% accuracy.</div>
+        <div class="f"><b>Fixed:</b> gave it the verified NPCI reference — the banks' descriptions,
+          deliberately not the answers. 42% → 95%. A test fails if an answer ever leaks in.</div></div>
+      <div class="chx an d5"><div class="p">My tests were calling the live API.</div>
+        <div class="f"><b>Fixed:</b> every pytest run was creating real payment links. Suite time fell
+          3.2s → 0.94s once blocked — proving the calls had been real.</div></div>
+      <div class="chx an d6"><div class="p">One malformed reply killed a 60-case run.</div>
+        <div class="f"><b>Fixed:</b> the schema caught it, but the crash lost 24 cases. Undecidable
+          cases now become auditable human escalations and the batch continues.</div></div>
+      <div class="chx an d6"><div class="p">My "immutable" log wasn't durable.</div>
+        <div class="f"><b>Fixed:</b> a redeploy destroyed a verified ₹9,999 recovery. Moved to Postgres —
+          which also made duplicate webhooks structurally unable to double-count.</div></div>
+    </div>
+  </section>
+
+  <!-- 9 RESULT -->
+  <section class="scene" data-dur="28">
+    <div class="kick an">The result</div>
+    <h2 class="an d1">Live, deployed, and measured.</h2>
+    <div class="nums" id="liveNums">
+      <div class="num b an d2"><b data-n="95" data-s="%">0</b><span>Cause accuracy</span></div>
+      <div class="num an d3"><b data-n="60">0</b><span>Failed debits processed</span></div>
+      <div class="num r an d4"><b data-n="3">0</b><span>Compliance rules fired</span></div>
+      <div class="num g an d5"><b data-n="98">0</b><span>Automated tests</span></div>
+    </div>
+    <p class="med an d6" style="margin-top:3vh">What I have <em>not</em> claimed: this is one proven
+      recovery, not a recovery rate — that would need real customers. One config flag stops every
+      external action.</p>
+  </section>
+
+  <!-- 10 CLOSE -->
+  <section class="scene" data-dur="16">
+    <h2 class="an">Naya proposes.<br>Raksha decides what's allowed.<br>
+      <span class="grad">Lekha only counts what's proven.</span></h2>
+    <p class="med an d3" style="margin-top:2vh">mandate-recovery-agent.onrender.com<br>
+      github.com/Saniya6112003/mandate-recovery-agent</p>
+  </section>
+
+</div>
+
+<div id="cap"></div>
+
+<div id="hud" class="show">
+  <button id="play">▐▐ Pause</button>
+  <button id="prev">←</button><button id="next">→</button>
+  <span id="sceneNo">1 / 10</span>
+  <div id="bar"><div id="fill"></div></div>
+  <button id="vo">🔊 Voice on</button>
+  <button id="cc">CC on</button>
+</div>
+
+<script>
+const scenes = [...document.querySelectorAll(".scene")];
+const durs = scenes.map(s => +s.dataset.dur);
+const NARR = [
+  "A customer already said yes. The mandate is signed, the money is owed, and on collection day the debit silently fails. Nobody calls anyone. The merchant simply loses it.",
+  "UPI Autopay doesn't fail like a card does. A card mandate is a stored credential. UPI Autopay needs a live bank approval on every single debit, so it fails several times more often, and for reasons that have no card equivalent. I E: funds blocked against a different mandate. V A: the mandate was revoked. Q A: paused by the customer. M A zero: it doesn't exist any more. For several of these, retrying isn't merely useless. It isn't permitted.",
+  "So the task is three things at once. Work out why this specific debit failed. Pick an action that is actually lawful under R B I mandate rules. And be able to prove afterwards that any rupee you claim to have recovered actually arrived. I built an agent with three parts that decide.",
+  "Naya is the analyst. She reads the raw decline code, the retry history, the amount and the mandate's age, and proposes one bounded action. She's fast, she's articulate, and sometimes she is confidently wrong. Raksha is the compliance layer. She is not A I. She is deterministic code that reads the mandate's real status from the bank, not Naya's opinion of it, and she never asks how confident Naya was. Lekha keeps the audit log. She writes every decision immutably, and refuses to write the word recovered until a cryptographically signed webhook proves the money arrived.",
+  "Here is a real case shape. A four thousand nine hundred and ninety nine rupee debit fails with code Q A. Naya diagnoses an authentication failure, ninety six percent confident, and recommends retrying immediately. She is wrong. Q A means the customer paused this mandate. It cannot be debited at all. Raksha blocks it. Not because she doubted the confidence score. She never looked at it. She checked the authoritative mandate status independently, saw paused, and refused. The case was rerouted to notify the customer, with the reason written verbatim into the audit log. A ninety six percent confident misdiagnosis still could not produce an unlawful retry.",
+  "And I can show you why it's built that way, with data. Across three sixty case runs I measured the model's confidence when it was right against its confidence when it was wrong. The gap was plus zero point zero zero three. Then minus zero point zero five one. Then plus zero point zero one four. It changes sign between runs. With only two to four wrong cases per run, no single number there is a real measurement, and that instability is the finding. The model is ninety five percent accurate, and its confidence still tells you nothing about when it is wrong. That is exactly why the compliance layer is deterministic code and not a better prompt.",
+  "Now the money. This is a real Razorpay test mode payment link, created by the deployed service, and genuinely paid. Razorpay's A P I says paid. My audit log says pending, because no signature verified webhook had arrived yet. Then Razorpay signs and delivers the webhook, the H M A C verifies, and only now does the rupee figure move. Same system, same real money. Pending without proof. Recovered with it.",
+  "Building this broke in ways worth showing. My first dataset used decline codes that looked real and weren't. The model kept hallucinating what codes meant, so accuracy sat at forty two percent until I gave it the verified reference. My test suite was quietly calling the live A P I on every run. One malformed model reply crashed a sixty case batch. And my immutable audit log turned out not to be durable: a routine redeploy destroyed a webhook verified nine thousand nine hundred and ninety nine rupee recovery, which is why it now lives in Postgres.",
+  "Sixty synthetic failures with real decline codes. Ninety five percent cause accuracy. Three different compliance rules fired on real cases. Ninety eight automated tests, including one that fails if the suite ever touches a live A P I. What I have not claimed: this is one proven recovery, not a recovery rate. That would need real customers.",
+  "Naya proposes. Raksha decides what is allowed. Lekha only counts what is proven. Thank you."
+];
+
+let i = 0, playing = true, t0 = 0, raf = null, voice = true, cap = true;
+const fill = document.getElementById("fill"), no = document.getElementById("sceneNo"),
+      capEl = document.getElementById("cap");
+
+function speak(n){
+  if (!voice || !window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(NARR[n]);
+  u.rate = 1.0; u.pitch = 1.0;
+  const vs = speechSynthesis.getVoices();
+  const pick = vs.find(v => /en-IN/i.test(v.lang)) ||
+               vs.find(v => /en-GB/i.test(v.lang)) ||
+               vs.find(v => /en-US/i.test(v.lang));
+  if (pick) u.voice = pick;
+  speechSynthesis.speak(u);
+}
+
+function counters(sc){
+  sc.querySelectorAll("[data-n]").forEach(el => {
+    const target = +el.dataset.n, suf = el.dataset.s || "";
+    let n = 0, step = Math.max(1, Math.round(target/40));
+    const iv = setInterval(() => {
+      n += step; if (n >= target){ n = target; clearInterval(iv); }
+      el.textContent = n + suf;
+    }, 28);
+  });
+}
+
+function show(n){
+  i = (n + scenes.length) % scenes.length;
+  scenes.forEach(s => s.classList.remove("on"));
+  const sc = scenes[i];
+  // restart CSS animations
+  sc.querySelectorAll(".an,.tl").forEach(el => { el.style.animation = "none"; void el.offsetWidth; el.style.animation = ""; });
+  sc.classList.add("on");
+  no.textContent = (i+1) + " / " + scenes.length;
+  capEl.textContent = NARR[i];
+  capEl.classList.toggle("on", cap);
+  counters(sc);
+  speak(i);
+  t0 = performance.now();
+}
+
+function tick(now){
+  if (playing){
+    const el = (now - t0) / 1000, d = durs[i];
+    fill.style.width = Math.min(100, el/d*100) + "%";
+    if (el >= d){ show(i+1); }
+  } else { t0 = now - (parseFloat(fill.style.width||0)/100)*durs[i]*1000; }
+  raf = requestAnimationFrame(tick);
+}
+
+document.getElementById("play").onclick = e => {
+  playing = !playing;
+  e.target.textContent = playing ? "▐▐ Pause" : "▶ Play";
+  if (!playing) speechSynthesis && speechSynthesis.cancel(); else speak(i);
+};
+document.getElementById("next").onclick = () => show(i+1);
+document.getElementById("prev").onclick = () => show(i-1);
+document.getElementById("vo").onclick = e => {
+  voice = !voice; e.target.textContent = voice ? "🔊 Voice on" : "🔇 Voice off";
+  if (!voice) speechSynthesis && speechSynthesis.cancel(); else speak(i);
+};
+document.getElementById("cc").onclick = e => {
+  cap = !cap; e.target.textContent = cap ? "CC on" : "CC off"; capEl.classList.toggle("on", cap);
+};
+addEventListener("keydown", e => {
+  if (e.code === "Space"){ e.preventDefault(); document.getElementById("play").click(); }
+  if (e.code === "ArrowRight") show(i+1);
+  if (e.code === "ArrowLeft") show(i-1);
+  if (e.key === "f") document.documentElement.requestFullscreen?.();
+});
+
+// live numbers from the real audit log
+fetch("api/dashboard").then(r=>r.json()).then(d=>{
+  const s = d.summary;
+  const nums = document.querySelectorAll("#liveNums [data-n]");
+  if (s.accuracy != null) nums[0].dataset.n = Math.round(s.accuracy*100);
+  if (s.cases) nums[1].dataset.n = s.cases;
+}).catch(()=>{});
+
+if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => {};
+setTimeout(() => { show(0); raf = requestAnimationFrame(tick); }, 400);
+</script>
+</body>
+</html>
