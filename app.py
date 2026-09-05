@@ -46,14 +46,29 @@ def get_audit_log():
 
 
 @app.post("/demo/run-batch")
-def run_batch(limit: Optional[int] = None):
+def run_batch(limit: Optional[int] = None, resume: bool = False):
+    """Run the recovery loop over the batch.
+
+    `resume=true` skips mandates already in the audit log, so a deployed
+    instance can be filled up across several calls without re-deciding — and
+    without double-counting them in the metrics.
+    """
     events = load_dataset()
     if limit:
         events = events[:limit]
+
+    skipped = 0
+    if resume:
+        done = {entry["mandate_id"] for entry in load_log()}
+        before = len(events)
+        events = [e for e in events if e.mandate_id not in done]
+        skipped = before - len(events)
+
     entries = process_batch(events)
     return {
         "provider": _provider(),
         "kill_switch_engaged": kill_switch_engaged(),
+        "skipped_already_done": skipped,
         "processed": len(entries),
         "entries": [e.model_dump(mode="json") for e in entries],
     }
