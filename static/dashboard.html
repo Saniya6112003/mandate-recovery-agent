@@ -6,216 +6,272 @@
 <title>Mandate Recovery — Audit Console</title>
 <style>
   :root{
-    --bg:#f6f7f9; --panel:#ffffff; --ink:#12161c; --muted:#5b6673;
-    --line:#e3e7ec; --accent:#1f6feb; --ok:#0f7b4f; --okbg:#e6f4ec;
-    --warn:#8a5a00; --warnbg:#fdf3e0; --stop:#a4262c; --stopbg:#fdeced;
-    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --bg:#f5f7fa; --panel:#fff; --ink:#111820; --muted:#5d6b7a; --faint:#8794a3;
+    --line:#e2e8f0; --accent:#1f6feb;
+    --ok:#0b7a52; --okbg:#e7f6ef; --okline:#b6e3ce;
+    --warn:#96590a; --warnbg:#fdf4e3; --warnline:#f0dcae;
+    --stop:#a3232b; --stopbg:#fdedee; --stopline:#f3c9cc;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   }
   @media (prefers-color-scheme:dark){
     :root{
-      --bg:#0d1117; --panel:#151b23; --ink:#e6edf3; --muted:#93a1b1;
-      --line:#262e38; --accent:#58a6ff; --ok:#4ac585; --okbg:#10261c;
-      --warn:#e3b341; --warnbg:#2a2110; --stop:#f97583; --stopbg:#2d1418;
+      --bg:#0c1117; --panel:#151c25; --ink:#e7eef6; --muted:#95a4b5; --faint:#6f8095;
+      --line:#242e3a; --accent:#5aa6ff;
+      --ok:#4fce93; --okbg:#0f2a1f; --okline:#1d4735;
+      --warn:#eab84d; --warnbg:#2a2211; --warnline:#4a3c17;
+      --stop:#fb8b95; --stopbg:#2d1519; --stopline:#4d2229;
     }
   }
   *{box-sizing:border-box}
-  body{
-    margin:0; background:var(--bg); color:var(--ink);
-    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    -webkit-font-smoothing:antialiased;
-  }
-  .wrap{max-width:1240px; margin:0 auto; padding:32px 24px 72px}
-  header{display:flex; flex-wrap:wrap; gap:16px; align-items:baseline; justify-content:space-between; margin-bottom:8px}
-  h1{font-size:21px; margin:0; letter-spacing:-.01em}
-  .sub{color:var(--muted); font-size:13.5px; margin:6px 0 26px; max-width:76ch}
-  .pill{font-size:12px; padding:4px 10px; border-radius:999px; border:1px solid var(--line); color:var(--muted); background:var(--panel)}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px;margin:0 auto;padding:34px 22px 80px}
 
-  .grid{display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(178px,1fr)); margin-bottom:14px}
-  .card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px}
-  .card .k{font-size:11.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted)}
-  .card .v{font-size:27px; font-weight:600; margin-top:7px; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
-  .card .n{font-size:12.5px; color:var(--muted); margin-top:4px}
+  h1{font-size:24px;margin:0 0 8px;letter-spacing:-.02em}
+  .lede{font-size:15.5px;color:var(--muted);margin:0 0 8px;max-width:70ch}
+  .status{display:inline-block;font-size:12.5px;color:var(--muted);
+    border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 12px;margin-bottom:30px}
 
-  .panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px 22px; margin-bottom:14px}
-  .panel h2{font-size:14px; margin:0 0 4px; letter-spacing:-.01em}
-  .panel p.note{color:var(--muted); font-size:13px; margin:0 0 14px; max-width:82ch}
+  h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--faint);
+    margin:0 0 4px;font-weight:700}
+  .h2note{font-size:13.5px;color:var(--muted);margin:0 0 16px;max-width:74ch}
+  section{margin-bottom:38px}
 
-  .calib{display:flex; flex-wrap:wrap; gap:28px; align-items:flex-end}
-  .calib div span{display:block}
-  .calib .lab{font-size:12px; color:var(--muted)}
-  .calib .num{font-size:30px; font-weight:650; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
-  .delta{font-size:13px; color:var(--muted); border-left:1px solid var(--line); padding-left:26px}
+  /* pipeline */
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+  .step{flex:1 1 170px;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:13px 15px;position:relative}
+  .step b{display:block;font-size:13.5px;margin-bottom:3px}
+  .step span{font-size:12.5px;color:var(--muted);line-height:1.45}
+  .step em{position:absolute;top:-8px;left:14px;font-style:normal;font-size:10px;
+    font-weight:700;letter-spacing:.08em;color:var(--faint);background:var(--bg);padding:0 6px}
 
-  table{width:100%; border-collapse:collapse; font-size:13.5px}
-  th{
-    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.06em;
-    color:var(--muted); font-weight:600; padding:0 10px 9px; border-bottom:1px solid var(--line); white-space:nowrap;
-  }
-  td{padding:11px 10px; border-bottom:1px solid var(--line); vertical-align:top}
-  tbody tr:last-child td{border-bottom:0}
-  .code{font-family:var(--mono); font-size:12.5px}
-  .num{font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap}
-  .tag{display:inline-block; font-size:11.5px; padding:2px 8px; border-radius:999px; white-space:nowrap; font-weight:500}
-  .t-ok{background:var(--okbg); color:var(--ok)}
-  .t-warn{background:var(--warnbg); color:var(--warn)}
-  .t-stop{background:var(--stopbg); color:var(--stop)}
-  .t-mute{background:transparent; color:var(--muted); border:1px solid var(--line)}
-  .reason{color:var(--muted); font-size:12.5px; margin-top:5px; max-width:62ch}
-  .ovr{color:var(--stop); font-size:12.5px; margin-top:5px; max-width:62ch}
-  .miss{color:var(--stop)}
+  /* metrics */
+  .metrics{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
+  .m{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:16px 17px}
+  .m .lab{font-size:13px;font-weight:600}
+  .m .val{font-size:29px;font-weight:660;letter-spacing:-.025em;margin:7px 0 5px;
+    font-variant-numeric:tabular-nums}
+  .m .exp{font-size:12.5px;color:var(--muted);line-height:1.45}
+  .m.good .val{color:var(--ok)} .m.flag .val{color:var(--stop)}
+
+  /* callout */
+  .callout{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:10px;padding:17px 19px}
+  .callout p{margin:0 0 10px;font-size:14px;color:var(--muted);max-width:78ch}
+  .callout p:last-child{margin-bottom:0}
+  .callout strong{color:var(--ink)}
+  .pair{display:flex;gap:34px;flex-wrap:wrap;margin:14px 0 12px}
+  .pair div span{display:block}
+  .pair .n{font-size:25px;font-weight:660;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .pair .l{font-size:12.5px;color:var(--muted)}
+
+  /* decisions */
+  .case{background:var(--panel);border:1px solid var(--line);border-radius:11px;
+    padding:15px 17px;margin-bottom:11px}
+  .case.blocked{border-left:3px solid var(--stop)}
+  .case.done{border-left:3px solid var(--ok)}
+  .top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:11px}
+  .amt{font-size:18px;font-weight:660;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .mid{font-family:var(--mono);font-size:12px;color:var(--faint)}
+  .spacer{flex:1}
+  .line{display:flex;gap:9px;padding:7px 0;border-top:1px solid var(--line);font-size:13.5px}
+  .line .who{flex:0 0 92px;color:var(--faint);font-size:12px;text-transform:uppercase;
+    letter-spacing:.05em;font-weight:600;padding-top:2px}
+  .line .what{flex:1;min-width:0}
+  .say{color:var(--muted);font-size:13px;margin-top:3px}
+
+  .tag{display:inline-block;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;
+    border:1px solid transparent;white-space:nowrap}
+  .t-ok{background:var(--okbg);color:var(--ok);border-color:var(--okline)}
+  .t-warn{background:var(--warnbg);color:var(--warn);border-color:var(--warnline)}
+  .t-stop{background:var(--stopbg);color:var(--stop);border-color:var(--stopline)}
+  .t-mute{color:var(--muted);border-color:var(--line)}
+  .code{font-family:var(--mono);font-size:12.5px;background:var(--bg);
+    border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+
+  .legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;color:var(--muted);margin-bottom:16px}
+  .legend span b{font-weight:600;color:var(--ink)}
+
+  .empty{background:var(--panel);border:1px dashed var(--line);border-radius:11px;
+    padding:34px;text-align:center;color:var(--muted)}
+  .empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:7px}
+  pre{background:var(--bg);border:1px solid var(--line);border-radius:7px;
+    padding:9px 12px;font-size:12.5px;display:inline-block;margin:11px 0 0;font-family:var(--mono)}
+  footer{border-top:1px solid var(--line);padding-top:17px;color:var(--muted);font-size:12.5px;line-height:1.7}
   a{color:var(--accent)}
-  .scroll{overflow-x:auto}
-  .empty{color:var(--muted); padding:26px 0; text-align:center}
-  .bar{height:5px; background:var(--line); border-radius:3px; overflow:hidden; min-width:76px}
-  .bar i{display:block; height:100%; background:var(--ok)}
-  footer{color:var(--muted); font-size:12.5px; margin-top:30px; line-height:1.7}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <div>
-      <h1>UPI Autopay Mandate Recovery</h1>
-    </div>
-    <span class="pill" id="live">loading…</span>
-  </header>
-  <p class="sub">
-    Every recovery decision, the compliance verdict that reviewed it, and the outcome.
-    A case is marked <strong>recovered</strong> only when a signature-verified webhook confirms
-    payment — never because an API call succeeded.
+
+  <h1>UPI Autopay Mandate Recovery</h1>
+  <p class="lede">
+    When an automatic UPI payment fails, this agent works out <em>why</em>, decides what to do about it,
+    and has that decision checked against RBI compliance rules before anything happens.
+    Every step below is recorded and cannot be edited afterwards.
   </p>
+  <div class="status" id="status">loading…</div>
 
-  <div class="grid" id="cards"></div>
-
-  <section class="panel" id="calibPanel" hidden>
-    <h2>Confidence calibration</h2>
-    <p class="note">
-      The model's self-reported confidence, split by whether it was actually right.
-      These two numbers being close is the finding: confidence carries little information
-      about correctness, which is why the compliance rules are deterministic code that
-      overrides the model rather than a prompt asking it to be careful.
-    </p>
-    <div class="calib" id="calib"></div>
+  <section>
+    <h2>How a failed payment moves through the system</h2>
+    <p class="h2note">Each case runs through all five stages. Stage 3 can overrule stage 2.</p>
+    <div class="flow">
+      <div class="step"><em>1</em><b>Payment fails</b><span>The bank returns a decline code, e.g. <span class="code">Z9</span> = not enough money.</span></div>
+      <div class="step"><em>2</em><b>AI diagnoses</b><span>Reads the code and history, gives a cause, a plan, and how sure it is.</span></div>
+      <div class="step"><em>3</em><b>Rules check it</b><span>Fixed compliance code that can refuse the AI's plan. It always wins.</span></div>
+      <div class="step"><em>4</em><b>Action runs</b><span>Usually a real Razorpay payment link sent to the customer.</span></div>
+      <div class="step"><em>5</em><b>Outcome</b><span>Marked recovered only when a verified bank webhook confirms payment.</span></div>
+    </div>
   </section>
 
-  <section class="panel" id="causePanel" hidden>
-    <h2>Accuracy by true cause</h2>
-    <p class="note">Ground-truth labels are used for scoring only; the agent never sees them.</p>
-    <div class="scroll"><table id="causeTable"></table></div>
+  <section>
+    <h2>Results</h2>
+    <p class="h2note">From the cases processed so far.</p>
+    <div class="metrics" id="metrics"></div>
   </section>
 
-  <section class="panel">
-    <h2>Decision log</h2>
-    <p class="note">
-      Newest first. Rows flagged <span class="tag t-stop">overridden</span> are cases where the
-      compliance layer refused the model's recommendation.
-    </p>
-    <div class="scroll"><table id="rowsTable"></table></div>
+  <section id="calibSec" hidden>
+    <h2>Can we trust how confident the AI says it is?</h2>
+    <p class="h2note">The AI reports a confidence score with every answer. We checked whether that score actually predicts being right.</p>
+    <div class="callout">
+      <div class="pair" id="calibPair"></div>
+      <p id="calibVerdict"></p>
+      <p><strong>Why this matters:</strong> if confidence doesn't tell us when the AI is wrong, we can't let it
+      authorise payments on its own. That is exactly why stage 3 is ordinary code with fixed rules — it
+      doesn't care how certain the AI sounds.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Every decision, in order</h2>
+    <p class="h2note">Newest first. Read each card top to bottom: what failed, what the AI thought, what the rules said, what happened.</p>
+    <div class="legend">
+      <span><span class="tag t-ok">recovered</span> &nbsp;money confirmed back</span>
+      <span><span class="tag t-warn">awaiting proof</span> &nbsp;link sent, not yet paid</span>
+      <span><span class="tag t-stop">blocked</span> &nbsp;rules refused the AI's plan</span>
+      <span><span class="tag t-mute">human review</span> &nbsp;sent to a person</span>
+    </div>
+    <div id="cases"></div>
   </section>
 
   <footer>
-    <strong>confidence</strong> is the model's self-report, not a calibrated probability.
-    It is used only as a one-way escalation trigger, never as permission to act.<br>
-    Synthetic mandate failures; real Razorpay <strong>test-mode</strong> Payment Links. No real money moves.
+    <strong>Confidence</strong> is what the AI says about itself, not a verified probability — it only ever
+    triggers a human review, it never authorises an action.<br>
+    Payment failures are synthetic test data. Razorpay runs in <strong>test mode</strong>: real API, real
+    webhooks, no real money.
   </footer>
 </div>
 
 <script>
-const inr = n => n == null ? "—" : "₹" + Number(n).toLocaleString("en-IN", {maximumFractionDigits:0});
-const pct = n => n == null ? "—" : Math.round(n * 100) + "%";
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const inr = n => n == null ? "—" : "₹" + Number(n).toLocaleString("en-IN",{maximumFractionDigits:0});
+const esc = s => String(s ?? "").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const nice = s => String(s ?? "").replace(/_/g," ");
 
-function tag(text, kind){ return `<span class="tag ${kind}">${esc(text)}</span>`; }
+const ACTION = {
+  retry_now:"Retry the payment straight away",
+  retry_scheduled:"Retry later, at a better time",
+  notify_customer:"Send the customer a payment link",
+  escalate_human:"Send to a human for review",
+  stop:"Stop — do not chase this one"
+};
+const OUTCOME = {
+  recovered:["recovered","t-ok","A verified webhook confirmed the money arrived"],
+  pending:["awaiting proof","t-warn","Link sent — not counted until a webhook confirms payment"],
+  escalated:["human review","t-mute","Waiting on a person to decide"],
+  failed:["closed","t-stop","No recovery attempted"]
+};
 
-function outcomeTag(o){
-  if (o === "recovered") return tag("recovered", "t-ok");
-  if (o === "escalated") return tag("escalated", "t-warn");
-  if (o === "failed")    return tag("failed", "t-stop");
-  return tag(o, "t-mute");
-}
-
-function card(k, v, n){
-  return `<div class="card"><div class="k">${esc(k)}</div><div class="v">${v}</div>${
-    n ? `<div class="n">${n}</div>` : ""}</div>`;
+function metric(lab,val,exp,cls){
+  return `<div class="m ${cls||""}"><div class="lab">${lab}</div>
+    <div class="val">${val}</div><div class="exp">${exp}</div></div>`;
 }
 
 function render(d){
   const s = d.summary;
-  document.getElementById("live").textContent =
-    s.cases ? `${s.cases} decisions logged` : "no decisions yet";
+  document.getElementById("status").textContent =
+    s.cases ? `${s.cases} payment failures processed` : "no cases processed yet";
 
-  document.getElementById("cards").innerHTML = [
-    card("Cases", s.cases, s.scored ? `${s.scored} scored against ground truth` : "run a batch to populate"),
-    card("Diagnosis accuracy", pct(s.accuracy), s.scored ? `${s.correct}/${s.scored} correct` : "—"),
-    card("At risk", inr(s.amount_at_risk), "total value in batch"),
-    card("Recovered", inr(s.amount_recovered), `${s.recovered} webhook-verified`),
-    card("Guardrail overrides", s.overrides, "model recommendation refused"),
-    card("Escalated", s.escalated, "sent to human review"),
-    card("False-positive cost", inr(s.false_positive_cost),
-         `${s.false_positive_count} confident but wrong`),
-    card("Awaiting proof", s.pending, "paid but unverified stays pending"),
+  const acc = s.accuracy == null ? "—" : Math.round(s.accuracy*100) + "%";
+  document.getElementById("metrics").innerHTML = [
+    metric("Failed payments handled", s.cases,
+      "Each one was diagnosed, checked against the rules, and acted on."),
+    metric("AI got the cause right", acc,
+      s.scored ? `${s.correct} of ${s.scored} matched the real cause.` : "Nothing scored yet."),
+    metric("Money recovered", inr(s.amount_recovered),
+      `Confirmed by a verified webhook. ${inr(s.amount_at_risk)} was at stake in total.`, "good"),
+    metric("Blocked by the rules", s.overrides,
+      "Times compliance refused the AI's plan and did something safer instead.", s.overrides?"flag":""),
+    metric("Sent to a human", s.escalated,
+      "Cases the system judged too uncertain to handle by itself."),
+    metric("Confident but wrong", inr(s.false_positive_cost),
+      `${s.false_positive_count} case(s) where the AI was sure and still got the cause wrong.`,
+      s.false_positive_count?"flag":"")
   ].join("");
 
   if (s.confidence_when_right != null && s.confidence_when_wrong != null){
-    document.getElementById("calibPanel").hidden = false;
-    const gap = Math.abs(s.confidence_when_right - s.confidence_when_wrong);
-    document.getElementById("calib").innerHTML = `
-      <div><span class="lab">Mean confidence when right</span>
-           <span class="num">${s.confidence_when_right.toFixed(3)}</span></div>
-      <div><span class="lab">Mean confidence when wrong</span>
-           <span class="num">${s.confidence_when_wrong.toFixed(3)}</span></div>
-      <div class="delta">Difference of <strong>${gap.toFixed(3)}</strong>.<br>
-           Escalation threshold ${s.threshold}.</div>`;
+    document.getElementById("calibSec").hidden = false;
+    const r = s.confidence_when_right, w = s.confidence_when_wrong;
+    document.getElementById("calibPair").innerHTML = `
+      <div><span class="l">Average confidence when it was RIGHT</span><span class="n">${(r*100).toFixed(0)}%</span></div>
+      <div><span class="l">Average confidence when it was WRONG</span><span class="n">${(w*100).toFixed(0)}%</span></div>`;
+    document.getElementById("calibVerdict").innerHTML = w >= r
+      ? `<strong>The AI was just as sure — or surer — when it was wrong.</strong> Its confidence score
+         gives us no warning about mistakes, so it cannot be trusted as a safety signal.`
+      : `<strong>Only ${((r-w)*100).toFixed(0)} points separate being right from being wrong.</strong>
+         That is far too small a gap to rely on as a safety signal.`;
   }
 
-  if (d.by_cause.length){
-    document.getElementById("causePanel").hidden = false;
-    document.getElementById("causeTable").innerHTML =
-      `<thead><tr><th>True cause</th><th class="num">Cases</th><th>Accuracy</th>
-        <th class="num">Value</th></tr></thead><tbody>` +
-      d.by_cause.map(c => `<tr>
-        <td class="code">${esc(c.cause)}</td>
-        <td class="num">${c.n}</td>
-        <td><div style="display:flex;gap:9px;align-items:center">
-          <div class="bar"><i style="width:${(c.accuracy*100).toFixed(0)}%"></i></div>
-          <span class="num">${pct(c.accuracy)}</span></div></td>
-        <td class="num">${inr(c.amount)}</td></tr>`).join("") + `</tbody>`;
-  }
-
-  const t = document.getElementById("rowsTable");
+  const box = document.getElementById("cases");
   if (!d.rows.length){
-    t.outerHTML = `<div class="empty">No decisions yet — run <code>python run_batch.py</code>.</div>`;
+    box.innerHTML = `<div class="empty"><b>No payments processed yet</b>
+      Run a batch to populate this console.<pre>POST /demo/run-batch?limit=5</pre></div>`;
     return;
   }
-  t.innerHTML = `<thead><tr>
-      <th>Mandate</th><th>Code</th><th class="num">Amount</th>
-      <th>Diagnosis</th><th class="num">Conf.</th><th>Action</th><th>Outcome</th>
-    </tr></thead><tbody>` + d.rows.map(r => {
+
+  box.innerHTML = d.rows.map(r => {
+    const [oLabel,oCls,oExp] = OUTCOME[r.outcome] || [r.outcome,"t-mute",""];
     const wrong = r.match === false;
-    return `<tr>
-      <td class="code">${esc(r.mandate_id)}${r.is_hard_case ? " " + tag("hard", "t-mute") : ""}</td>
-      <td class="code">${esc(r.code)}</td>
-      <td class="num">${inr(r.amount)}</td>
-      <td>
-        <span class="code ${wrong ? "miss" : ""}">${esc(r.predicted)}</span>
-        ${wrong ? `<div class="ovr">actual: ${esc(r.true_cause)}</div>` : ""}
-        <div class="reason">${esc(r.reasoning)}</div>
-      </td>
-      <td class="num">${r.confidence.toFixed(2)}</td>
-      <td>
-        ${esc(r.action)}
-        ${r.overridden ? `<div class="ovr">${tag("overridden", "t-stop")} ${esc(r.override_reason)}</div>` : ""}
-        ${r.payment_url ? `<div class="reason"><a href="${esc(r.payment_url)}" target="_blank" rel="noopener">payment link</a></div>` : ""}
-      </td>
-      <td>${outcomeTag(r.outcome)}</td>
-    </tr>`;
-  }).join("") + `</tbody>`;
+    const cls = r.outcome === "recovered" ? "done" : (r.overridden ? "blocked" : "");
+    return `<div class="case ${cls}">
+      <div class="top">
+        <span class="amt">${inr(r.amount)}</span>
+        <span class="tag t-mute">bank code ${esc(r.code)}</span>
+        ${r.is_hard_case ? `<span class="tag t-mute">tricky case</span>` : ""}
+        <span class="spacer"></span>
+        <span class="mid">${esc(r.mandate_id)}</span>
+      </div>
+
+      <div class="line"><div class="who">AI thinks</div><div class="what">
+        <b>${esc(nice(r.predicted))}</b> — ${Math.round(r.confidence*100)}% sure
+        ${wrong ? ` <span class="tag t-stop">wrong — it was ${esc(nice(r.true_cause))}</span>` : ""}
+        <div class="say">${esc(r.reasoning)}</div>
+      </div></div>
+
+      <div class="line"><div class="who">Rules say</div><div class="what">
+        ${r.overridden
+          ? `<span class="tag t-stop">blocked</span>
+             <div class="say">Refused <b>${esc(nice(r.recommended))}</b> — ${esc(r.override_reason)}</div>`
+          : `<span class="tag t-ok">allowed</span>
+             <div class="say">No compliance rule was breached.</div>`}
+      </div></div>
+
+      <div class="line"><div class="who">We did</div><div class="what">
+        ${esc(ACTION[r.action] || nice(r.action))}
+        ${r.payment_url ? `<div class="say"><a href="${esc(r.payment_url)}" target="_blank" rel="noopener">open the payment link →</a></div>` : ""}
+      </div></div>
+
+      <div class="line"><div class="who">Result</div><div class="what">
+        <span class="tag ${oCls}">${oLabel}</span>
+        <div class="say">${oExp}</div>
+      </div></div>
+    </div>`;
+  }).join("");
 }
 
-fetch("api/dashboard")
-  .then(r => r.json())
-  .then(render)
-  .catch(e => { document.getElementById("live").textContent = "failed to load: " + e; });
+fetch("api/dashboard").then(r=>r.json()).then(render)
+  .catch(e=>{document.getElementById("status").textContent="could not load data: "+e;});
 </script>
 </body>
 </html>
