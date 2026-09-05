@@ -35,6 +35,12 @@ def home():
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@app.get("/intro", include_in_schema=False)
+def intro():
+    """Single opening slide — track, project, problem."""
+    return FileResponse(STATIC_DIR / "intro.html")
+
+
 @app.get("/pitch", include_in_schema=False)
 def pitch():
     """Self-playing pitch film — timed scenes, narration, live figures."""

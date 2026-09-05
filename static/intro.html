@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UPI Autopay Mandate Recovery Agent — Track 3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#02042B; --blue:#3395FF; --blue-l:#8CC5FF;
+  --red:#FF5A5F; --green:#3DDC97;
+  --ink:#EAF2FF; --dim:#A9BEDB; --faint:#7E96BC;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:'Inter',-apple-system,'Segoe UI',Roboto,sans-serif;
+  color:var(--ink); -webkit-font-smoothing:antialiased;
+  background:
+    radial-gradient(1200px 560px at 80% 6%, rgba(51,149,255,.24), transparent 62%),
+    radial-gradient(820px 480px at 6% 96%, rgba(61,220,151,.10), transparent 62%),
+    linear-gradient(163deg,#02042B 0%,#071440 56%,#0C2A66 100%);
+  display:grid; place-items:center; padding:6vh 7vw;
+}
+.wrap{width:100%;max-width:1180px}
+
+/* entrance */
+.a{opacity:0;transform:translateY(24px);animation:rise .9s cubic-bezier(.2,.7,.3,1) forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+.d1{animation-delay:.15s}.d2{animation-delay:.42s}.d3{animation-delay:.72s}
+.d4{animation-delay:1.02s}.d5{animation-delay:1.34s}
+@media(prefers-reduced-motion:reduce){.a{opacity:1;transform:none;animation:none}}
+
+.track{
+  display:inline-flex;align-items:center;gap:11px;
+  border:1px solid rgba(51,149,255,.4); background:rgba(51,149,255,.11);
+  border-radius:999px; padding:9px 20px; margin-bottom:4.2vh;
+}
+.track i{width:8px;height:8px;border-radius:50%;background:var(--blue);flex:none;
+  box-shadow:0 0 0 4px rgba(51,149,255,.22); animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.track span{font-size:clamp(11.5px,1.05vw,15px);font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--blue-l)}
+
+h1{font-size:clamp(34px,6.2vw,86px);line-height:1.03;letter-spacing:-.04em;font-weight:900;
+  margin-bottom:3.4vh;max-width:17ch}
+h1 .g{background:linear-gradient(96deg,#7CC0FF,#B9DCFF 52%,#8CFFD0);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+
+.rule{width:74px;height:4px;border-radius:3px;background:var(--blue);margin-bottom:3.2vh}
+
+.problem{font-size:clamp(16px,1.95vw,28px);line-height:1.5;color:var(--dim);max-width:52ch;
+  margin-bottom:2.4vh}
+.problem b{color:var(--ink);font-weight:600}
+.fix{font-size:clamp(14.5px,1.5vw,21px);line-height:1.55;color:var(--blue-l);max-width:54ch;
+  padding-left:20px;border-left:3px solid rgba(51,149,255,.5)}
+
+.foot{position:fixed;left:0;right:0;bottom:0;padding:3vh 7vw;
+  display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
+.name{font-size:clamp(15px,1.55vw,22px);font-weight:700;letter-spacing:-.01em}
+.meta{font-size:clamp(12px,1.1vw,15px);color:var(--faint);font-family:var(--mono)}
+.dotsep{color:var(--faint);opacity:.5}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="track a">
+    <i></i><span>Razorpay AI Buildathon · Track 3 — AI Revenue Recovery</span>
+  </div>
+
+  <h1 class="a d1">UPI Autopay<br><span class="g">Mandate Recovery Agent</span></h1>
+
+  <div class="rule a d2"></div>
+
+  <p class="problem a d3">
+    The customer already approved the mandate. The money is owed. And on collection day,
+    <b>the debit silently fails</b> — nobody is notified, and the merchant simply loses it.
+  </p>
+
+  <p class="fix a d4">
+    Most recovery is a blind retry loop that never asks <em>why</em> it failed — or whether
+    retrying is even legal.
+  </p>
+
+</div>
+
+<div class="foot a d5">
+  <span class="name">Saniya Randive</span>
+  <span class="dotsep">·</span>
+  <span class="meta">github.com/Saniya6112003/mandate-recovery-agent</span>
+  <span class="dotsep">·</span>
+  <span class="meta">mandate-recovery-agent.onrender.com</span>
+</div>
+
+</body>
+</html>
