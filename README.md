@@ -4,6 +4,10 @@ An explainable AI agent that recovers failed UPI Autopay mandate debits — diag
 
 **The claim isn't "we recover more." It's that every action is explainable, bounded by RBI mandate rules, and traceable end to end — and that a recovery is only counted when a signature-verified webhook says the money actually arrived.**
 
+### Live: [mandate-recovery-agent.onrender.com](https://mandate-recovery-agent.onrender.com)
+
+The audit console runs there against real Razorpay test-mode infrastructure. A ₹9,999 recovery on it was confirmed by a webhook Razorpay actually signed and delivered — not a simulated event. `POST /demo/run-batch?limit=3` runs a live batch; the free instance sleeps when idle, so the first request takes ~30s to wake.
+
 ---
 
 ## Why UPI Autopay specifically
@@ -137,20 +141,24 @@ The threshold does earn its place occasionally: `ZA` ("transaction declined", no
 
 In production this signal would route through a calibrated classifier. The honest version of the claim is that the guardrails are load-bearing and the confidence score is not.
 
-### The audit log refusing a real payment
+### The number that only moves on proof
 
-A live test-mode Payment Link for ₹9,999 was created by the executor and paid for real. Razorpay confirms it:
+This happened in two acts, and the first one matters as much as the second.
+
+**Act one — the refusal.** A test-mode Payment Link for ₹9,999 was created by the executor and genuinely paid. Razorpay confirmed `status=paid`. The audit log still read **`pending`**.
+
+That was not a bug. No signature-verified `payment_link.paid` event had arrived — the development network blocks inbound tunnelling, so Razorpay could not reach the local instance. The money was real and the agent still refused to count it. Marking it recovered would have meant trusting an API poll or the executor's own success, which is precisely the self-reported number this project exists to avoid.
+
+**Act two — the proof.** Once deployed to a public endpoint, the same flow ran again. Razorpay's servers delivered a real signed webhook, the app verified the HMAC, resolved `MID21C56811CD-a0-2b801868` back to its mandate, and flipped the outcome:
 
 ```
-plink_TYJdWhDKgUHZmj   status=paid   INR 9,999
-notes.mandate_id = MID21C56811CD     (attribution survived the round trip)
+Razorpay      plink_TYKDtjsrSokjEX   status = paid        INR 9,999
+Audit log     MID21C56811CD          outcome = recovered  INR 9,999
 ```
 
-The audit log still reads **`pending`** for that mandate.
+Nothing in that chain was simulated: real model reasoning, a real Payment Link created by the deployed service, a real payment, and a webhook signed by Razorpay and verified on arrival.
 
-That is not a bug — it is the design holding under pressure. The webhook could not be delivered (the demo network blocks inbound tunnelling), so no signature-verified `payment_link.paid` event ever arrived, so the system declined to claim the recovery. The money was real and the agent still would not count it.
-
-Marking this `recovered` would have required trusting either an API poll or the executor's own success — exactly the self-reported number this project exists to avoid. The ₹-recovered figure only ever moves on cryptographic proof, and it under-reports rather than overstates when that proof is missing.
+The contrast is the point. The same system, the same real money — `pending` without proof, `recovered` with it. The ₹-recovered figure moves only on cryptographic evidence, and it under-reports rather than overstates when that evidence is missing.
 
 ### What the guardrails actually caught
 
@@ -293,6 +301,20 @@ Covers the guardrail rules including the revoked-mandate override, exposure caps
 
 ---
 
+## Deployment
+
+`render.yaml` provisions the service as a Render blueprint: connect the repo, supply four secrets (`GROQ_API_KEY`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`), deploy. Secrets are marked `sync: false` so they never enter git, and a pre-commit hook blocks any commit containing a key.
+
+Deployment is a correctness requirement here, not a convenience: a signature-verified webhook needs an endpoint Razorpay can actually reach. Point the Razorpay webhook at `https://<service>/webhook` with `payment_link.paid` enabled.
+
+| Endpoint | Purpose |
+|---|---|
+| `/` | Audit console |
+| `/api/dashboard` | Metrics and decision rows as JSON |
+| `/webhook` | Razorpay receiver, HMAC-SHA256 verified |
+| `/demo/run-batch?limit=N` | Run a live batch |
+| `/healthz` | Health check, reports active provider and kill-switch state |
+
 ## Production readiness
 
 | Layer | Status |
@@ -302,6 +324,8 @@ Covers the guardrail rules including the revoked-mandate override, exposure caps
 | Audit log | Built — immutable, idempotent, exportable |
 | Human escalation routing | Built — confidence threshold |
 | Kill switch | Built |
+| Audit console | Built — deployed |
+| Webhook-verified recovery | Built — confirmed against live Razorpay |
 | Full RBI rule coverage beyond demo cases | Designed |
 | Reviewer workflow UI, drift detection | Designed |
 
@@ -309,7 +333,11 @@ Covers the guardrail rules including the revoked-mandate override, exposure caps
 
 ## Limitations
 
-- `confidence` is model self-report, not calibrated — see the metrics section for measured evidence of the gap.
-- Synthetic input data. Real API execution is on the output/recovery side, which is where it matters.
-- The reported accuracy figure is small-sample and provider-dependent.
-- Test-mode Razorpay only: no real money moves at any point.
+Stated plainly, because a reviewer will find them anyway:
+
+- **`confidence` is model self-report, not calibrated.** Measured across two runs it did not reliably separate correct answers from incorrect ones. It is used only as a one-way escalation trigger.
+- **Input data is synthetic.** Real API execution is on the output/recovery side, which is where correctness actually matters. Failure codes are real; the failures themselves are generated.
+- **Accuracy is small-sample and provider-dependent.** 60 cases on one model. Treat it as directional.
+- **The mandate-state guardrail did not fire in the measured run** — the model never recommended retrying a revoked mandate, so the rule had nothing to catch. It is covered by explicit tests rather than left to a dataset coincidence.
+- **Test-mode Razorpay only.** No real money moves at any point.
+- **One verified recovery, not a recovery rate.** ₹9,999 was confirmed end to end by a real webhook. That proves the mechanism, not a conversion percentage — claiming a recovery rate would need real customers, not synthetic ones.
