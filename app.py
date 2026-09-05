@@ -30,9 +30,15 @@ app.include_router(webhook_router)
 
 
 @app.get("/", include_in_schema=False)
-def dashboard():
+def home():
+    """Landing page — what the system does, and why each part exists."""
+    return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/console", include_in_schema=False)
+def console():
     """Audit console — every decision, verdict and outcome."""
-    return FileResponse(STATIC_DIR / "dashboard.html")
+    return FileResponse(STATIC_DIR / "console.html")
 
 
 @app.get("/api/dashboard")

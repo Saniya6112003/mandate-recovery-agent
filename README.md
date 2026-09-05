@@ -338,7 +338,8 @@ Deployment is a correctness requirement here, not a convenience: a signature-ver
 
 | Endpoint | Purpose |
 |---|---|
-| `/` | Audit console |
+| `/` | Landing site — the problem, the pipeline, the guardrail moment, build challenges |
+| `/console` | Audit console — every decision, verdict and outcome |
 | `/api/dashboard` | Metrics and decision rows as JSON |
 | `/webhook` | Razorpay receiver, HMAC-SHA256 verified |
 | `/demo/run-batch?limit=N` | Run a live batch |
